@@ -1,3 +1,7 @@
+import { useState } from "react";
+
+import { RepoPicker } from "./features/repo-picker/RepoPicker";
+
 const milestoneItems = [
   "Open Windows desktop app",
   "Pick a local folder",
@@ -7,6 +11,8 @@ const milestoneItems = [
 ];
 
 export default function App() {
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
+
   return (
     <main className="min-h-screen bg-zinc-950 px-8 py-10 text-zinc-100">
       <section className="mx-auto max-w-4xl">
@@ -24,6 +30,11 @@ export default function App() {
           AI, no RAG, no cloud, no auto-fixing.
         </p>
 
+        <RepoPicker
+          selectedPath={selectedPath}
+          onSelectPath={setSelectedPath}
+        />
+
         <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
           <h2 className="text-lg font-medium">Milestone 1 target</h2>
 
@@ -35,14 +46,6 @@ export default function App() {
               </li>
             ))}
           </ul>
-
-          <button
-            type="button"
-            disabled
-            className="mt-6 rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-500"
-          >
-            Repo picker coming next
-          </button>
         </div>
       </section>
     </main>
