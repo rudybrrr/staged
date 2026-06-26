@@ -1,4 +1,5 @@
 mod commands {
+    pub mod git_status;
     pub mod repo;
 }
 
@@ -19,6 +20,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             greet,
+            commands::git_status::list_changed_files,
             commands::repo::inspect_repo
         ])
         .run(tauri::generate_context!())

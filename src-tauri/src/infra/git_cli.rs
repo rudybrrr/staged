@@ -44,6 +44,10 @@ pub fn has_uncommitted_changes(repo_path: &str) -> Result<bool, String> {
     Ok(!status.is_empty())
 }
 
+pub fn porcelain_status(repo_path: &str) -> Result<String, String> {
+    run_git(repo_path, &["status", "--porcelain=v1"])
+}
+
 fn run_git(repo_path: &str, args: &[&str]) -> Result<String, String> {
     let output = Command::new("git")
         .arg("-C")
