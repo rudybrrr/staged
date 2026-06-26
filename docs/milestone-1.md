@@ -4,7 +4,7 @@
 
 Build the first local verification spine for Staged.
 
-When complete, Milestone 1 will prove that the desktop app can open on Windows, let the user select a local folder, validate that the folder is a Git repository, and show basic repository state without using AI.
+Milestone 1 proves that the desktop app can open on Windows, let the user select a local folder, validate that the folder is a Git repository, and show basic repository state without using AI.
 
 This milestone is intentionally narrow. It focuses on local repo inspection only.
 
@@ -21,27 +21,23 @@ Implemented:
 - Tauri app shell.
 - Tailwind-based Staged home screen.
 - Tauri dialog plugin.
-- Frontend-only folder picker.
+- Frontend folder picker.
 - Selected folder path display.
+- Rust Tauri command `inspect_repo`.
+- Git repository validation.
+- Repo name display.
+- Repo path display.
+- Current branch display.
+- Clean/dirty working tree detection.
+- Invalid folder error handling.
 
 Current behavior:
 
 - The user can select a local folder through the Tauri dialog plugin.
 - The selected folder path is displayed in the UI.
-- The selected folder is not validated as a Git repository yet.
-- No Git metadata is read or displayed yet.
-
-## Remaining Work in Milestone 1
-
-Remaining Milestone 1 work:
-
-- Git repository validation.
-- Rust Git metadata command.
-- Repo name display.
-- Current branch display.
-- Dirty state detection.
-- Whether uncommitted changes exist.
-- Clear error handling for invalid non-Git folders.
+- The selected folder is validated as a Git repository through `inspect_repo`.
+- For valid Git repositories, the UI displays repo name, repo path, current branch, and clean/dirty state.
+- For invalid folders, the UI displays a clear error without crashing.
 
 ## Out of Scope / Not Implemented
 
@@ -72,28 +68,24 @@ Current backend state:
 
 - Tauri v2 app shell.
 - Tauri dialog plugin.
-- No Rust Git metadata command yet.
-
-Target backend state for the completed milestone:
-
 - Narrow Rust command for Git repository validation and metadata retrieval.
 - Git CLI usage from the Rust backend, not directly from the frontend.
 
-## Target Architecture for the Completed Milestone
+## Architecture
 
 ```text
 React UI
-  ↓ Tauri invoke
+  -> Tauri invoke
 Rust command layer
-  ↓
+  ->
 Git CLI
-  ↓
+  ->
 Repo metadata returned to UI
 ```
 
-## Required Repo Metadata Once Implemented
+## Repo Metadata
 
-The backend should return a typed object with this shape conceptually:
+The backend returns a typed object with this shape conceptually:
 
 ```ts
 type RepoSummary = {
@@ -107,7 +99,7 @@ type RepoSummary = {
 
 Use clear technical names. Do not over-theme internal field names.
 
-## Git Commands Expected Once Implemented
+## Git Commands
 
 The Rust backend can use Git CLI commands such as:
 
@@ -118,7 +110,7 @@ git -C <repo_path> branch --show-current
 git -C <repo_path> status --porcelain
 ```
 
-Expected completed behavior:
+Expected behavior:
 
 - If the selected folder is not a Git repository, show a clear error in the UI.
 - If the folder is a Git repository, show repo metadata.
@@ -134,9 +126,6 @@ Current UI behavior:
 - Current milestone target.
 - Active folder picker button.
 - Selected folder path after selection.
-
-Target UI behavior for the completed milestone:
-
 - Repo name.
 - Full repo path.
 - Current branch.
@@ -162,7 +151,7 @@ Milestone 1 is done when:
 - No database has been added.
 - No diff viewer or command runner has been added yet.
 
-Current status: this definition of done is not complete yet.
+Current status: implemented.
 
 ## Manual Test Plan
 
@@ -174,7 +163,7 @@ Current status: this definition of done is not complete yet.
 4. Confirm the selected path is displayed.
 5. Confirm the app does not crash.
 
-### Future tests once Git validation is implemented
+### Repo inspection behavior
 
 Test with a valid Git repo:
 

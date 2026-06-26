@@ -14,7 +14,7 @@ Local-first verification before commit.
 
 Milestone 1: Local Repo Inspector.
 
-The current milestone is focused on building the local foundation for selecting a repository folder and, when complete, validating Git repository state without AI.
+Milestone 1 is implemented. It provides the local foundation for selecting a repository folder and validating Git repository state without AI.
 
 ## Current implementation status
 
@@ -23,16 +23,18 @@ Implemented:
 - Tauri app shell.
 - Tailwind-based Staged home screen.
 - Tauri dialog plugin.
-- Frontend-only folder picker.
+- Frontend folder picker.
 - Selected folder path display.
+- Rust Tauri command `inspect_repo`.
+- Git repository validation.
+- Repo name display.
+- Repo path display.
+- Current branch display.
+- Clean/dirty working tree detection.
+- Invalid folder error handling.
 
 Not implemented yet:
 
-- Git repository validation.
-- Rust Git metadata command.
-- Repo name display.
-- Current branch display.
-- Dirty state detection.
 - Changed files list.
 - Diff viewer.
 - Command runner.
