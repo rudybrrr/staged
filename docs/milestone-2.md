@@ -1,10 +1,12 @@
 # Milestone 2: Git Status and Changed Files
 
+Status: Implemented.
+
 ## Goal
 
 Show which files have changed in the selected Git repository before moving to diff viewing.
 
-Milestone 2 extends the local repo inspection flow from Milestone 1. After the user selects a valid Git repository, Staged should list changed files using Git status data and show a clear changed-files panel in the frontend.
+Milestone 2 extends the local repo inspection flow from Milestone 1. After the user selects a valid Git repository, Staged lists changed files using Git status data and shows a changed-files panel in the frontend.
 
 This milestone is intentionally narrow. It does not include diff rendering, command execution, risk analysis, staging workflows, persistence, or AI features.
 
@@ -14,7 +16,7 @@ Staged is a local-first verification workbench for auditing code changes before 
 
 Milestone 0 is complete.
 
-Milestone 1 is complete and currently supports:
+Milestone 1 is complete and supports:
 
 - Opening as a Tauri desktop app.
 - Selecting a local folder.
@@ -25,37 +27,38 @@ Milestone 1 is complete and currently supports:
 - Showing clean or dirty working tree state.
 - Showing invalid-folder errors.
 
-Milestone 2 should make the dirty state actionable by showing which files changed. This is the bridge between basic repo inspection and the later diff viewer.
+Milestone 2 is complete and makes the dirty state actionable by showing which files changed. It is the bridge between basic repo inspection and the later diff viewer.
 
-## In Scope
+## Implemented
 
 Backend:
 
-- Add a backend Tauri command conceptually named `list_changed_files(repo_path: String) -> Result<Vec<ChangedFile>, String>`.
-- Use Git CLI through the Rust/Tauri backend.
-- Run `git status --porcelain=v1`.
-- Parse changed file entries from porcelain status output.
-- Handle added, modified, deleted, renamed, copied, and untracked files.
-- Preserve index and worktree status where useful.
-- Return an empty list for a clean repository.
-- Return a clear error if Git status fails.
+- Backend Tauri command `list_changed_files`.
+- Git CLI status retrieval through the Rust/Tauri backend.
+- `git status --porcelain=v1 --untracked-files=all`.
+- Parsing for added, modified, deleted, renamed, copied, and untracked files.
+- Index and worktree status preservation.
+- Empty list for clean repositories.
+- Clear error return when Git status fails.
 
 Frontend:
 
-- Add a frontend helper conceptually named `listChangedFiles(repoPath: string)`.
-- Refresh changed files after a valid repo is selected.
-- Add a changed-files panel after a valid repo is selected.
-- Display each changed file path.
-- Display a readable file status.
-- Show a clear empty state when there are no changes.
-- Show a clear error state if Git status fails.
+- Changed-files retrieval from the frontend.
+- Changed-files refresh after a valid repo is selected.
+- Changed-files panel after a valid repo is selected.
+- Changed-file count.
+- File path display.
+- Readable file status display.
+- Empty state for clean repositories.
+- Error state for Git status failures.
+- Manual `Refresh changed files` button.
+- Correct path parsing, including `README.md` and untracked files.
 
 ## Out of Scope / Not Implemented
 
-The following are outside Milestone 2:
+The following are outside Milestone 2 and are not implemented yet:
 
 - Diff viewer.
-- Full diff parsing.
 - Command runner.
 - Pre-Stage Screening.
 - Risk classifier.
@@ -88,27 +91,27 @@ Backend:
 - Repository path passed from the already-selected valid repo.
 - Status parsing inside the backend, not the frontend.
 
-Milestone 2 should keep the same architecture direction as Milestone 1: the frontend requests structured repo data through Tauri commands, and the backend handles Git CLI details.
+Milestone 2 keeps the same architecture direction as Milestone 1: the frontend requests structured repo data through Tauri commands, and the backend handles Git CLI details.
 
 ## Architecture
 
 ```text
 React UI
   ->
-Frontend helper listChangedFiles(repoPath)
+Frontend changed-files request
   ->
 Tauri invoke
   ->
 Rust command list_changed_files(repo_path)
   ->
-git -C <repo_path> status --porcelain=v1
+git -C <repo_path> status --porcelain=v1 --untracked-files=all
   ->
 Parsed changed-file list returned to UI
 ```
 
 ## Changed File Data Shape
 
-The backend should return a typed list with this conceptual shape:
+The backend returns a typed list with this conceptual shape:
 
 ```ts
 type ChangedFile = {
@@ -127,18 +130,18 @@ Use clear technical names. Avoid product-themed names for internal fields.
 
 ## Git Command
 
-Use:
+Milestone 2 uses:
 
 ```bash
-git -C <repo_path> status --porcelain=v1
+git -C <repo_path> status --porcelain=v1 --untracked-files=all
 ```
 
 Expected behavior:
 
 - If the repository is clean, Git returns no status lines and the backend returns an empty list.
 - If the repository has changes, each status line is parsed into one `ChangedFile`.
-- If the Git command fails, return a string error that the UI can display.
-- The frontend should not parse raw Git output.
+- If the Git command fails, the backend returns a string error that the UI can display.
+- The frontend does not parse raw Git output.
 
 ## Porcelain Status Parsing
 
@@ -154,7 +157,7 @@ Where:
 - `Y` is the worktree status.
 - `??` indicates an untracked file.
 
-Milestone 2 should support these status categories:
+Milestone 2 supports these status categories:
 
 - Added.
 - Modified.
@@ -176,7 +179,7 @@ C  or  C -> copied
 other    -> unknown
 ```
 
-Renamed and copied files can include both old and new paths. Preserve the old path when present:
+Renamed and copied files can include both old and new paths. The old path is preserved when present:
 
 ```text
 R  old/path.ts -> new/path.ts
@@ -185,19 +188,19 @@ C  old/path.ts -> new/path.ts
 
 For renamed and copied entries:
 
-- `file_path` should be the new path.
-- `old_file_path` should be the old path.
+- `file_path` is the new path.
+- `old_file_path` is the old path.
 
 For all other entries:
 
-- `file_path` should be the reported path.
-- `old_file_path` should be `null`.
+- `file_path` is the reported path.
+- `old_file_path` is `null`.
 
 ## Status Flags
 
-Preserve enough status detail for later milestones without building the later features now.
+The implementation preserves enough status detail for later milestones without building the later features now.
 
-Expected flag behavior:
+Flag behavior:
 
 - `index_status` is the first porcelain status column, or `null` when not useful.
 - `worktree_status` is the second porcelain status column, or `null` when not useful.
@@ -205,37 +208,37 @@ Expected flag behavior:
 - `is_unstaged` is true when the worktree status represents an unstaged change.
 - `is_untracked` is true for `??` entries.
 
-These flags are useful because future diff viewing needs to distinguish staged and unstaged changes. Milestone 2 only needs to expose and display the information.
+These flags are useful because future diff viewing needs to distinguish staged and unstaged changes. Milestone 2 only exposes and displays the information.
 
-## UI Requirements
+## UI Behavior
 
-Add a changed-files panel that appears after a valid repo is selected.
+The changed-files panel appears after a valid repo is selected.
 
-The panel should show:
+The panel shows:
 
 - Changed file count.
 - File path.
 - Readable status label.
-- Optional staged or unstaged indicator if the existing UI style supports it cleanly.
+- Optional staged or unstaged indicator when the existing UI style supports it cleanly.
 
 Empty state:
 
-- If the repo is clean, show a clear message such as `No changed files`.
-- Do not treat a clean repo as an error.
+- If the repo is clean, the UI shows a clear message such as `No changed files`.
+- A clean repo is not treated as an error.
 
 Error state:
 
-- If `list_changed_files` fails, show a clear non-crashing error.
-- Keep the selected repo metadata visible if it is still available.
+- If `list_changed_files` fails, the UI shows a clear non-crashing error.
+- Selected repo metadata stays visible if it is still available.
 
 Refresh behavior:
 
-- After a valid repo is selected, refresh the changed-files list.
-- If a later refresh control exists or is added within the existing pattern, it should refresh repo metadata and changed files together.
+- After a valid repo is selected, the changed-files list refreshes.
+- The manual `Refresh changed files` button refreshes the changed-files list.
 
 ## Non-Goals
 
-Milestone 2 should not:
+Milestone 2 does not:
 
 - Show file diffs.
 - Read file contents.
@@ -248,32 +251,23 @@ Milestone 2 should not:
 - Add GitHub integration.
 - Modify files in the selected repo.
 
-## Final Definition of Done
+## Completion Summary
 
-Milestone 2 is done when:
+Milestone 2 is implemented:
 
 - The app can select and inspect a valid Git repository as in Milestone 1.
-- The backend exposes a Tauri command conceptually named `list_changed_files`.
-- The backend runs `git status --porcelain=v1` for the selected repo.
+- The backend exposes `list_changed_files`.
+- The backend runs `git status --porcelain=v1 --untracked-files=all` for the selected repo.
 - The backend returns a typed list of changed files.
 - Clean repositories return an empty list.
-- Added files are shown correctly.
-- Modified files are shown correctly.
-- Deleted files are shown correctly.
-- Renamed files are shown with the new path and old path preserved.
-- Copied files are shown with the new path and old path preserved.
-- Untracked files are shown correctly.
+- Added, modified, deleted, renamed, copied, and untracked files are parsed.
+- Renamed and copied files preserve old and new paths.
 - Index and worktree status are preserved where useful.
-- The frontend has a helper conceptually named `listChangedFiles`.
 - The frontend refreshes changed files after a valid repo is selected.
-- The UI shows a changed-files panel.
-- The UI shows file path and status for each changed file.
+- The UI shows a changed-files panel with file count, paths, and statuses.
 - The UI shows a clear empty state when there are no changes.
 - The UI shows a clear error state if Git status fails.
-- No diff viewer has been added.
-- No command runner has been added.
-- No AI-related feature has been added.
-- No database has been added.
+- No diff viewer, command runner, AI feature, database, or GitHub integration has been added.
 
 ## Manual Test Plan
 
@@ -324,4 +318,4 @@ Milestone 2 is done when:
 
 ## Notes
 
-Milestone 2 should make local changes visible, but it should not interpret them yet. The goal is a reliable changed-files list that later milestones can use for diff viewing, screening, risk analysis, payload construction, and reporting.
+Milestone 2 makes local changes visible, but it does not interpret them yet. The goal is a reliable changed-files list that later milestones can use for diff viewing, screening, risk analysis, payload construction, and reporting.
