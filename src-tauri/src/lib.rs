@@ -1,4 +1,5 @@
 mod commands {
+    pub mod diff;
     pub mod git_status;
     pub mod repo;
 }
@@ -20,6 +21,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             greet,
+            commands::diff::get_file_diff,
+            commands::diff::get_repo_diff,
             commands::git_status::list_changed_files,
             commands::repo::inspect_repo
         ])

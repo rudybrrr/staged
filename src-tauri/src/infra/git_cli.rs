@@ -51,6 +51,21 @@ pub fn porcelain_status(repo_path: &str) -> Result<String, String> {
     )
 }
 
+pub fn repo_diff(repo_path: &str) -> Result<String, String> {
+    run_git_preserving_leading_whitespace(repo_path, &["diff", "--no-ext-diff"])
+}
+
+pub fn file_diff(repo_path: &str, file_path: &str) -> Result<String, String> {
+    run_git_preserving_leading_whitespace(repo_path, &["diff", "--no-ext-diff", "--", file_path])
+}
+
+pub fn cached_file_diff(repo_path: &str, file_path: &str) -> Result<String, String> {
+    run_git_preserving_leading_whitespace(
+        repo_path,
+        &["diff", "--cached", "--no-ext-diff", "--", file_path],
+    )
+}
+
 fn run_git(repo_path: &str, args: &[&str]) -> Result<String, String> {
     run_git_with_stdout(repo_path, args, |stdout| stdout.trim().to_string())
 }
