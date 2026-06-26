@@ -1,12 +1,12 @@
 # Milestone 3: Diff Viewer
 
-Status: Planned.
+Status: Implemented.
 
 ## Goal
 
 Allow the user to inspect the Git diff for changed files before moving to command execution or Pre-Stage Screening.
 
-Milestone 3 builds on Milestone 2 by making the changed-files list inspectable. After the user selects a valid Git repository and sees changed files, Staged should let the user select a file and view its Git diff in a read-only diff panel.
+Milestone 3 builds on Milestone 2 by making the changed-files list inspectable. After the user selects a valid Git repository and sees changed files, Staged lets the user select a file and view its Git diff in a read-only diff panel.
 
 This milestone is intentionally narrow. It does not include syntax highlighting, file editing, staging workflows, command execution, risk analysis, persistence, or AI features.
 
@@ -32,33 +32,35 @@ Milestone 2 is complete and supports:
 - Showing changed file status.
 - Refreshing changed files manually.
 
-Milestone 3 makes those changed files reviewable by displaying their unified Git diff.
+Milestone 3 is complete and makes those changed files reviewable by displaying their unified Git diff.
 
-## In Scope
+## Implemented
 
 Backend:
 
-- Backend Tauri command to get a Git diff for the selected repository.
-- Git CLI execution through the Rust/Tauri backend.
-- Unified diff text as the initial diff format.
-- Diff retrieval for a selected changed file.
-- Diff retrieval for all unstaged changes if useful for implementation simplicity.
+- Backend Tauri command `get_file_diff`.
+- Backend Tauri command `get_repo_diff`.
+- Git CLI diff retrieval using `git diff --no-ext-diff`.
+- File-specific diff retrieval using `git diff --no-ext-diff -- <file_path>`.
+- Basic staged fallback using `git diff --cached --no-ext-diff -- <file_path>`.
 - Clear error return when Git diff fails.
 
 Frontend:
 
-- Frontend helper for requesting a file diff.
-- Changed-file selection behavior.
-- Diff viewer panel.
-- Readable monospace rendering of unified diff text.
+- Frontend helper `getFileDiff`.
+- Clickable changed-file rows.
+- Selected file state.
+- Read-only diff viewer panel.
+- Unified diff text rendered in a whitespace-preserving monospace block.
+- Empty state when no file is selected.
 - Loading state while fetching diff.
-- Empty state when a selected file has no available diff.
-- Error state when diff retrieval fails.
-- Read-only diff display.
+- Error state if diff retrieval fails.
+- No-diff state for untracked files or files with no available Git diff.
+- Selected diff clears on repo switch and refresh.
 
 ## Out of Scope
 
-The following are outside Milestone 3:
+The following are outside Milestone 3 and are not implemented yet:
 
 - Syntax-highlighted diff rendering.
 - Inline comments.
@@ -80,40 +82,46 @@ The following are outside Milestone 3:
 - GitHub PR integration.
 - Auto-fixing.
 
-## Technical Scope
+## Technical Summary
 
-Backend target command:
+Backend command:
 
 ```rust
 get_file_diff(repo_path: String, file_path: String) -> Result<String, String>
 ```
 
-Optional backend command, only if useful for implementation simplicity:
+Backend command:
 
 ```rust
 get_repo_diff(repo_path: String) -> Result<String, String>
 ```
 
-Frontend target helper:
+Frontend helper:
 
 ```ts
 getFileDiff(repoPath, filePath)
 ```
 
-The backend should continue to own Git CLI details. The frontend should request diff text through Tauri commands and should not shell out to Git directly.
+The backend owns Git CLI details. The frontend requests diff text through Tauri commands and does not shell out to Git directly.
 
 ## Git Command Direction
 
-The selected-file diff should use the selected repository path and file path. Conceptually:
+The selected-file diff uses the selected repository path and file path. Conceptually:
 
 ```bash
-git -C <repo_path> diff -- <file_path>
+git -C <repo_path> diff --no-ext-diff -- <file_path>
 ```
 
-If a repository-wide unstaged diff is added, it can use:
+The repository-wide unstaged diff uses:
 
 ```bash
-git -C <repo_path> diff
+git -C <repo_path> diff --no-ext-diff
+```
+
+The file-specific staged fallback uses:
+
+```bash
+git -C <repo_path> diff --cached --no-ext-diff -- <file_path>
 ```
 
 Expected behavior:
@@ -134,10 +142,12 @@ Expected interaction:
 - The frontend requests the selected file diff.
 - The diff panel shows a loading state while the request is in progress.
 - The diff panel renders unified diff text in a readable monospace block.
-- If the selected file has no available diff, the panel shows a clear empty state.
+- If no file is selected, the panel shows a clear empty state.
+- If the selected file has no available diff, the panel shows a clear no-diff state.
 - If Git diff fails, the panel shows a clear non-crashing error.
+- If the repo changes or changed files are refreshed, the selected diff clears.
 
-The diff viewer must not allow editing, staging, unstaging, patch application, command execution, or AI actions.
+The diff viewer does not allow editing, staging, unstaging, patch application, command execution, or AI actions.
 
 ## Architecture
 
@@ -152,7 +162,7 @@ Tauri invoke
   ->
 Rust command get_file_diff(repo_path, file_path)
   ->
-git -C <repo_path> diff -- <file_path>
+git -C <repo_path> diff --no-ext-diff -- <file_path>
   ->
 Unified diff text returned to UI
   ->
@@ -178,7 +188,7 @@ Read-only diff panel
 ### No available diff
 
 1. Select a changed file that has no available diff output.
-2. Confirm the diff panel shows a clear empty state.
+2. Confirm the diff panel shows a clear no-diff state.
 3. Confirm the app does not treat the empty diff as a crash.
 
 ### Git diff failure
@@ -186,6 +196,12 @@ Read-only diff panel
 1. Select a non-Git folder or otherwise trigger a safe Git diff failure.
 2. Confirm the UI shows a clear error.
 3. Confirm the app remains usable.
+
+### Repo switch and refresh
+
+1. Select a changed file and confirm its diff is displayed.
+2. Switch repositories or refresh changed files.
+3. Confirm the selected diff clears.
 
 ### Feature boundary
 
@@ -197,9 +213,9 @@ Read-only diff panel
 
 ## Definition of Done
 
-- Backend diff command exists and passes `cargo check`.
+- Backend diff commands exist.
 - Frontend can display diff for a changed file.
-- Diff viewer has loading, empty, and error states.
+- Diff viewer has loading, empty, no-diff, and error states.
 - Diff viewer is read-only.
 - No command runner or AI-related features have been added.
 

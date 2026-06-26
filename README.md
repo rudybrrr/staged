@@ -12,9 +12,9 @@ Local-first verification before commit.
 
 ## Current milestone
 
-Milestone 2: Git Status and Changed Files.
+Milestone 3: Diff Viewer.
 
-Milestones 1 and 2 are implemented. Staged can select a local Git repository, validate repository state, show repo metadata, and list changed files without AI.
+Milestones 1, 2, and 3 are implemented. Staged can select a local Git repository, validate repository state, show repo metadata, list changed files, and display read-only unified diffs for selected changed files without AI.
 
 ## Current implementation status
 
@@ -42,10 +42,24 @@ Implemented:
 - Git status error state.
 - Manual `Refresh changed files` button.
 - Correct changed-file path parsing, including `README.md` and untracked files.
+- Rust Tauri command `get_file_diff`.
+- Rust Tauri command `get_repo_diff`.
+- Git diff retrieval with `git diff --no-ext-diff`.
+- File-specific diff retrieval with `git diff --no-ext-diff -- <file_path>`.
+- Basic staged fallback with `git diff --cached --no-ext-diff -- <file_path>`.
+- Frontend helper `getFileDiff`.
+- Clickable changed-file rows.
+- Selected file state.
+- Read-only diff viewer panel.
+- Unified diff text rendered in a whitespace-preserving monospace block.
+- Empty diff viewer state when no file is selected.
+- Loading state while fetching a diff.
+- Error state when diff retrieval fails.
+- No-diff state for untracked files or files with no available Git diff.
+- Selected diff clears on repo switch and refresh.
 
 Not implemented yet:
 
-- Diff viewer.
 - Command runner.
 - Pre-Stage Screening.
 - Risk classifier.
