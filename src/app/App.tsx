@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import { ChangedFilesPanel } from "./features/changed-files/ChangedFilesPanel";
 import {
@@ -8,6 +8,7 @@ import {
 import { DiffViewerPanel } from "./features/diff-viewer/DiffViewerPanel";
 import { PreStageScreeningPanel } from "./features/pre-stage-screening/PreStageScreeningPanel";
 import { RepoPicker } from "./features/repo-picker/RepoPicker";
+import { StagePayloadPreviewPanel } from "./features/stage-payload/StagePayloadPreviewPanel";
 import {
   getFileDiff,
   inspectRepo,
@@ -15,6 +16,8 @@ import {
   type ChangedFile,
   type RepoSummary,
 } from "./lib/repo";
+import { buildPreStageFindings } from "./lib/screening";
+import { buildStagePayload } from "./lib/stagePayload";
 
 const milestoneItems = [
   "Inspect local Git repositories",
@@ -71,6 +74,55 @@ export default function App() {
   );
   const diffRequestId = useRef(0);
   const repoRequestId = useRef(0);
+  const screeningFindings = useMemo(
+    () =>
+      buildPreStageFindings({
+        repoSummary,
+        changedFiles,
+        availableCommands: commandRunnerState.availableCommands,
+        latestCommandResult: commandRunnerState.latestCommandResult,
+        commandError: commandRunnerState.error,
+        commandAvailabilityError: commandRunnerState.availabilityError,
+        isCommandRunning: commandRunnerState.isRunning,
+        isLoadingCommands: commandRunnerState.isLoadingCommands,
+      }),
+    [
+      changedFiles,
+      commandRunnerState.availabilityError,
+      commandRunnerState.availableCommands,
+      commandRunnerState.error,
+      commandRunnerState.isLoadingCommands,
+      commandRunnerState.isRunning,
+      commandRunnerState.latestCommandResult,
+      repoSummary,
+    ],
+  );
+  const stagePayload = useMemo(() => {
+    if (!repoSummary?.is_git_repo) {
+      return null;
+    }
+
+    return buildStagePayload({
+      repoSummary,
+      changedFiles,
+      selectedFile: selectedChangedFile,
+      selectedFileDiff: diffText,
+      latestCommandResult: commandRunnerState.latestCommandResult,
+      commandError: commandRunnerState.error ?? commandRunnerState.availabilityError,
+      availableCommands: commandRunnerState.availableCommands,
+      screeningFindings,
+    });
+  }, [
+    changedFiles,
+    commandRunnerState.availabilityError,
+    commandRunnerState.availableCommands,
+    commandRunnerState.error,
+    commandRunnerState.latestCommandResult,
+    diffText,
+    repoSummary,
+    screeningFindings,
+    selectedChangedFile,
+  ]);
 
   function clearSelectedDiff() {
     diffRequestId.current += 1;
@@ -292,6 +344,8 @@ export default function App() {
           isLoadingCommands={commandRunnerState.isLoadingCommands}
         />
 
+        <StagePayloadPreviewPanel payload={stagePayload} />
+
         {repoSummary && (
           <>
             <ChangedFilesPanel
@@ -335,6 +389,7 @@ export default function App() {
     </main>
   );
 }
+
 
 
 
