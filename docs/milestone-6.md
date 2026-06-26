@@ -1,14 +1,14 @@
 # Milestone 6: Stage Payload Builder
 
-Status: Planned.
+Status: Implemented.
 
 ## Goal
 
 Build a compact, structured evidence bundle from existing local data that can later be reviewed in Staging Ground and eventually sent to an LLM, without making any AI call yet.
 
-Milestone 6 proves that Staged can reduce and organize the local evidence an AI would need to review. The app should not send a whole repository or blindly dump all available data. It should build a structured Stage Payload from known local evidence only.
+Milestone 6 proves that Staged can reduce and organize the local evidence an AI would need to review. The app does not send a whole repository or blindly dump all available data. It builds a structured Stage Payload from known local evidence only.
 
-This milestone is intentionally narrow. It does not include AI review, OpenAI API integration, token budgeting, Staging Ground approval, Stage Reports, persistence, secret scanning, redaction, or backend payload construction unless strictly necessary.
+This milestone is intentionally narrow. It does not include AI review, OpenAI API integration, Token Budget, Staging Ground approval, Stage Reports, persistence, secret scanning, redaction, or backend payload construction.
 
 ## Product Context
 
@@ -48,36 +48,33 @@ Milestone 5 is complete and supports:
 - Showing deterministic Pre-Stage Screening findings from local app state.
 - Summarizing repository state, changed files, file status counts, and command runner state.
 
-Milestone 6 will package those existing local facts into a structured read-only preview.
+Milestone 6 packages those existing local facts into a structured read-only preview.
 
-## In Scope
+## Implemented
 
 Frontend:
 
-- Stage Payload builder.
-- Frontend type conceptually named `StagePayload`.
-- Frontend utility conceptually named `buildStagePayload`.
-- Frontend panel conceptually named `StagePayloadPreviewPanel`.
+- Frontend `StagePayload` type.
+- Frontend `buildStagePayload` utility.
 - Read-only payload preview panel.
-- Formatted JSON preview.
-- Clear copy that the preview is local only.
+- Formatted JSON preview using `JSON.stringify(payload, null, 2)`.
+- Clear local-preview warning:
+  `Local preview only. No AI call has been made. Secret redaction is not implemented yet.`
 
 Payload contents:
 
 - Selected repository metadata.
 - Changed-file summary.
 - Changed-file status counts.
-- Selected changed files or all changed files for the first version.
-- Diff text for the currently selected file if already loaded.
-- Latest command result.
+- Changed files list.
+- Selected-file metadata.
+- Diff text for the currently selected file only if already loaded.
+- Latest command result when available.
 - Command error if available.
+- Command availability snapshot.
 - Pre-Stage Screening findings.
-- Payload metadata:
-  - `created_at`
-  - `repo_path`
-  - `repo_name`
-  - `current_branch`
-  - `changed_file_count`
+- Payload completeness metadata that makes missing evidence visible.
+- Limitations list.
 
 State inputs:
 
@@ -88,11 +85,12 @@ State inputs:
 - Selected file diff if available.
 - Latest command result.
 - Command error if available.
+- Command availability snapshot.
 - Pre-Stage Screening findings.
 
 ## Out of Scope
 
-The following must not be added in Milestone 6:
+The following have not been added in Milestone 6:
 
 - LLM or AI review.
 - OpenAI API integration.
@@ -114,9 +112,9 @@ The following must not be added in Milestone 6:
 
 ## Technical Summary
 
-Milestone 6 should be implemented in the frontend using existing local app state. Backend payload logic should not be added unless strictly necessary.
+Milestone 6 is implemented in the frontend using existing local app state. The Stage Payload is local evidence only: it is assembled from state already available in the app, and it does not fetch every file diff, read untracked file contents, persist payloads, send payloads over the network, or call AI services.
 
-Conceptual payload shape:
+Payload shape:
 
 ```ts
 type StagePayload = {
@@ -140,11 +138,26 @@ type StagePayload = {
       is_unstaged: boolean;
       is_untracked: boolean;
     }>;
+    selected_file: {
+      file_path: string;
+      old_file_path: string | null;
+      status: string;
+      is_staged: boolean;
+      is_unstaged: boolean;
+      is_untracked: boolean;
+    } | null;
     selected_file_diff: {
       file_path: string;
       diff: string;
     } | null;
   };
+  command_availability: Array<{
+    command_id: string;
+    label: string;
+    command: string;
+    available: boolean;
+    unavailable_reason: string | null;
+  }>;
   command_result: {
     command_id: string;
     command: string;
@@ -154,6 +167,7 @@ type StagePayload = {
     stdout: string;
     stderr: string;
   } | null;
+  command_error: string | null;
   screening_findings: Array<{
     id: string;
     level: "pass" | "info" | "warning" | "fail";
@@ -161,18 +175,29 @@ type StagePayload = {
     detail: string;
     source: "repo" | "changed_files" | "command_runner";
   }>;
+  payload_completeness: {
+    includes_selected_file_diff: boolean;
+    selected_file_path: string | null;
+    changed_files_without_diff_count: number;
+    untracked_files_without_content_count: number;
+    command_result_included: boolean;
+    supported_commands_detected: number;
+    limitations: string[];
+  };
 };
 ```
 
-Expected builder behavior:
+Builder behavior:
 
-- Return `null` or an empty state when no valid Git repository is selected.
 - Build payloads from existing state only.
 - Include the selected file diff only when it is already loaded.
 - Do not fetch diffs for every changed file.
+- Do not read untracked file contents.
 - Do not persist payloads.
 - Do not send payloads over the network.
 - Do not call AI services.
+- Include payload completeness metadata so missing evidence is visible.
+- Include a limitations list for known gaps.
 
 ## UI Behavior
 
@@ -269,16 +294,24 @@ The frontend owns payload construction for Milestone 6. Existing backend command
 - Payload uses existing local evidence only.
 - Payload includes repository metadata.
 - Payload includes changed-file summary and status counts.
+- Payload includes changed files list.
+- Payload includes selected-file metadata.
 - Payload includes selected file diff only if already loaded.
 - Payload includes latest command result when available.
+- Payload includes command error when available.
+- Payload includes command availability snapshot.
 - Payload includes Pre-Stage Screening findings.
+- Payload includes completeness metadata so missing evidence is visible.
+- Payload includes limitations list.
 - Payload preview is read-only.
 - Payload clears when no valid Git repository is selected.
 - No AI integration has been added.
 - No Token Budget has been added.
+- No Staging Ground approval workflow has been added.
 - No Stage Report has been added.
+- No redaction has been added.
 - No persistence has been added.
 
 ## Notes
 
-Milestone 6 is a payload-construction milestone. Its purpose is to organize local evidence into a compact structured preview before later milestones introduce approval workflows, token budgeting, AI review, reports, history, or integrations.
+Milestone 6 is a payload-construction milestone. Its purpose is to organize local evidence into a compact structured preview before later milestones introduce approval workflows, token budgeting, AI review, reports, history, redaction, or integrations.

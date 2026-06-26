@@ -12,9 +12,9 @@ Local-first verification before commit.
 
 ## Current milestone
 
-Milestone 5: Pre-Stage Screening.
+Milestone 6: Stage Payload Builder.
 
-Milestones 1, 2, 3, 4, and 5 are implemented. Staged can select a local Git repository, validate repository state, show repo metadata, list changed files, display read-only unified diffs for selected changed files, run allowlisted verification commands, and show deterministic pre-stage screening findings without AI.
+Milestones 1, 2, 3, 4, 5, and 6 are implemented. Staged can select a local Git repository, validate repository state, show repo metadata, list changed files, display read-only unified diffs for selected changed files, run allowlisted verification commands, show deterministic pre-stage screening findings without AI, and build a read-only local Stage Payload preview from existing app state.
 
 ## Current implementation status
 
@@ -84,12 +84,29 @@ Implemented:
 - Read-only screening UI.
 - Clear separation between deterministic screening and future AI review.
 - Screening panel clears stale state when selecting invalid folders or switching repos.
+- Frontend `StagePayload` type.
+- Frontend `buildStagePayload` utility.
+- Read-only Stage Payload preview panel.
+- Formatted JSON payload preview using `JSON.stringify(payload, null, 2)`.
+- Stage Payload built from existing local app state only.
+- Repo metadata in the Stage Payload.
+- Changed-file summary in the Stage Payload.
+- Changed-file status counts in the Stage Payload.
+- Changed files list in the Stage Payload.
+- Selected-file metadata in the Stage Payload.
+- Selected-file diff included only when already loaded.
+- Latest command result included when available.
+- Command error included when available.
+- Command availability snapshot included.
+- Pre-Stage Screening findings included.
+- Payload completeness metadata included to make missing evidence visible.
+- Payload limitations list included.
+- Clear local-preview warning: `Local preview only. No AI call has been made. Secret redaction is not implemented yet.`
 
 Not implemented yet:
 
 - Workspace or nested package command detection.
 - Risk classifier.
-- Stage Payload.
 - Token Budget.
 - Staging Ground.
 - Stage Report.
