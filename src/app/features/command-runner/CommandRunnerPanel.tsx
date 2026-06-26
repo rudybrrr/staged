@@ -1,26 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 
 import {
+  getAvailableRepoCommands,
   runRepoCommand,
+  type AvailableCommand,
+  type CommandId,
   type CommandResult,
 } from "../../lib/repo";
-
-type CommandId = "npm_test" | "npm_lint" | "npm_typecheck";
-
-type CommandOption = {
-  id: CommandId;
-  label: string;
-};
 
 type CommandRunnerPanelProps = {
   repoPath: string;
 };
-
-const commandOptions: CommandOption[] = [
-  { id: "npm_test", label: "npm test" },
-  { id: "npm_lint", label: "npm run lint" },
-  { id: "npm_typecheck", label: "npm run typecheck" },
-];
 
 function errorMessage(error: unknown, fallback: string) {
   if (error instanceof Error) {
@@ -41,37 +31,87 @@ function resultStatusClassName(success: boolean) {
 }
 
 export function CommandRunnerPanel({ repoPath }: CommandRunnerPanelProps) {
+  const [availableCommands, setAvailableCommands] = useState<
+    AvailableCommand[]
+  >([]);
+  const [isLoadingCommands, setIsLoadingCommands] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(
+    null,
+  );
   const [result, setResult] = useState<CommandResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [runningCommandId, setRunningCommandId] = useState<CommandId | null>(
     null,
   );
-  const requestId = useRef(0);
+  const availabilityRequestId = useRef(0);
+  const commandRequestId = useRef(0);
 
   useEffect(() => {
-    requestId.current += 1;
+    const currentRequestId = availabilityRequestId.current + 1;
+    availabilityRequestId.current = currentRequestId;
+    commandRequestId.current += 1;
+
+    setAvailableCommands([]);
+    setIsLoadingCommands(false);
+    setAvailabilityError(null);
     setResult(null);
     setError(null);
     setRunningCommandId(null);
+    setIsLoadingCommands(true);
+
+    getAvailableRepoCommands(repoPath)
+      .then((commands) => {
+        if (availabilityRequestId.current !== currentRequestId) {
+          return;
+        }
+
+        setAvailableCommands(commands);
+      })
+      .catch((availabilityLoadError) => {
+        if (availabilityRequestId.current !== currentRequestId) {
+          return;
+        }
+
+        setAvailabilityError(
+          errorMessage(
+            availabilityLoadError,
+            "Unable to check available commands for this repository.",
+          ),
+        );
+      })
+      .finally(() => {
+        if (availabilityRequestId.current === currentRequestId) {
+          setIsLoadingCommands(false);
+        }
+      });
+
+    return () => {
+      availabilityRequestId.current += 1;
+      commandRequestId.current += 1;
+    };
   }, [repoPath]);
 
-  async function handleRunCommand(commandId: CommandId) {
-    const currentRequestId = requestId.current + 1;
-    requestId.current = currentRequestId;
+  async function handleRunCommand(command: AvailableCommand) {
+    if (!command.available || runningCommandId !== null) {
+      return;
+    }
+
+    const currentRequestId = commandRequestId.current + 1;
+    commandRequestId.current = currentRequestId;
     setResult(null);
     setError(null);
-    setRunningCommandId(commandId);
+    setRunningCommandId(command.command_id);
 
     try {
-      const commandResult = await runRepoCommand(repoPath, commandId);
+      const commandResult = await runRepoCommand(repoPath, command.command_id);
 
-      if (requestId.current !== currentRequestId) {
+      if (commandRequestId.current !== currentRequestId) {
         return;
       }
 
       setResult(commandResult);
     } catch (commandError) {
-      if (requestId.current !== currentRequestId) {
+      if (commandRequestId.current !== currentRequestId) {
         return;
       }
 
@@ -79,13 +119,17 @@ export function CommandRunnerPanel({ repoPath }: CommandRunnerPanelProps) {
         errorMessage(commandError, "Unable to run the selected command."),
       );
     } finally {
-      if (requestId.current === currentRequestId) {
+      if (commandRequestId.current === currentRequestId) {
         setRunningCommandId(null);
       }
     }
   }
 
   const isRunning = runningCommandId !== null;
+  const hasCommands = availableCommands.length > 0;
+  const hasAvailableCommands = availableCommands.some(
+    (command) => command.available,
+  );
 
   return (
     <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
@@ -97,20 +141,66 @@ export function CommandRunnerPanel({ repoPath }: CommandRunnerPanelProps) {
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2 sm:justify-end">
-          {commandOptions.map((command) => (
-            <button
-              key={command.id}
-              type="button"
-              onClick={() => handleRunCommand(command.id)}
-              disabled={isRunning}
-              className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm font-medium text-zinc-100 transition hover:border-zinc-500 hover:bg-zinc-900 disabled:cursor-not-allowed disabled:text-zinc-500"
-            >
-              {runningCommandId === command.id ? "Running..." : command.label}
-            </button>
-          ))}
+        <div className="flex flex-wrap gap-3 sm:justify-end">
+          {availableCommands.map((command) => {
+            const disabled =
+              isRunning || isLoadingCommands || !command.available;
+
+            return (
+              <div key={command.command_id} className="max-w-44">
+                <button
+                  type="button"
+                  onClick={() => handleRunCommand(command)}
+                  disabled={disabled}
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm font-medium text-zinc-100 transition hover:border-zinc-500 hover:bg-zinc-900 disabled:cursor-not-allowed disabled:text-zinc-500"
+                >
+                  {runningCommandId === command.command_id
+                    ? "Running..."
+                    : command.label}
+                </button>
+
+                {!command.available && command.unavailable_reason && (
+                  <p className="mt-1 text-xs leading-5 text-zinc-500">
+                    {command.unavailable_reason}
+                  </p>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
+
+      {isLoadingCommands && (
+        <p className="mt-4 text-sm text-zinc-400">
+          Checking supported commands...
+        </p>
+      )}
+
+      {!isLoadingCommands &&
+        !availabilityError &&
+        hasCommands &&
+        !hasAvailableCommands && (
+        <p className="mt-4 text-sm text-zinc-400">
+          No supported npm scripts found in this repository.
+        </p>
+      )}
+
+      {!isLoadingCommands && !availabilityError && !hasCommands && (
+        <p className="mt-4 text-sm text-zinc-400">
+          No supported commands found for this repository.
+        </p>
+      )}
+
+      {availabilityError && (
+        <div className="mt-4 rounded-lg border border-red-900/70 bg-red-950/30 p-4">
+          <p className="text-sm font-medium text-red-200">
+            Command availability check failed
+          </p>
+          <p className="mt-2 text-sm leading-6 text-red-100/80">
+            {availabilityError}
+          </p>
+        </div>
+      )}
 
       {isRunning && (
         <p className="mt-4 text-sm text-zinc-400">Running command...</p>

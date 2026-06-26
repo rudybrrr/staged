@@ -27,6 +27,7 @@ pub fn run() {
             commands::diff::get_repo_diff,
             commands::git_status::list_changed_files,
             commands::repo::inspect_repo,
+            commands::repo_command::get_available_repo_commands,
             commands::repo_command::run_repo_command
         ])
         .run(tauri::generate_context!())

@@ -26,6 +26,16 @@ export type ChangedFile = {
   is_untracked: boolean;
 };
 
+export type CommandId = "npm_test" | "npm_lint" | "npm_typecheck";
+
+export type AvailableCommand = {
+  command_id: CommandId;
+  label: string;
+  command: string;
+  available: boolean;
+  unavailable_reason: string | null;
+};
+
 export type CommandResult = {
   command_id: string;
   command: string;
@@ -48,9 +58,15 @@ export function getFileDiff(repoPath: string, filePath: string): Promise<string>
   return invoke<string>("get_file_diff", { repoPath, filePath });
 }
 
+export function getAvailableRepoCommands(
+  repoPath: string,
+): Promise<AvailableCommand[]> {
+  return invoke<AvailableCommand[]>("get_available_repo_commands", { repoPath });
+}
+
 export function runRepoCommand(
   repoPath: string,
-  commandId: "npm_test" | "npm_lint" | "npm_typecheck",
+  commandId: CommandId,
 ): Promise<CommandResult> {
   return invoke<CommandResult>("run_repo_command", { repoPath, commandId });
 }

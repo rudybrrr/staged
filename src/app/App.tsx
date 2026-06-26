@@ -47,6 +47,7 @@ export default function App() {
   const [diffError, setDiffError] = useState<string | null>(null);
   const [isLoadingDiff, setIsLoadingDiff] = useState(false);
   const diffRequestId = useRef(0);
+  const repoRequestId = useRef(0);
 
   function clearSelectedDiff() {
     diffRequestId.current += 1;
@@ -56,14 +57,26 @@ export default function App() {
     setIsLoadingDiff(false);
   }
 
-  async function loadChangedFiles(repoPath: string) {
+  async function loadChangedFiles(
+    repoPath: string,
+    requestId = repoRequestId.current,
+  ) {
     setIsLoadingChangedFiles(true);
     setChangedFilesError(null);
 
     try {
       const files = await listChangedFiles(repoPath);
+
+      if (repoRequestId.current !== requestId) {
+        return;
+      }
+
       setChangedFiles(files);
     } catch (error) {
+      if (repoRequestId.current !== requestId) {
+        return;
+      }
+
       setChangedFilesError(
         errorMessage(
           error,
@@ -71,11 +84,16 @@ export default function App() {
         ),
       );
     } finally {
-      setIsLoadingChangedFiles(false);
+      if (repoRequestId.current === requestId) {
+        setIsLoadingChangedFiles(false);
+      }
     }
   }
 
   async function handleSelectPath(path: string) {
+    const requestId = repoRequestId.current + 1;
+    repoRequestId.current = requestId;
+
     setSelectedPath(path);
     setRepoSummary(null);
     setInspectionError(null);
@@ -87,15 +105,26 @@ export default function App() {
 
     try {
       const summary = await inspectRepo(path);
+
+      if (repoRequestId.current !== requestId) {
+        return;
+      }
+
       setRepoSummary(summary);
       setIsInspecting(false);
-      await loadChangedFiles(path);
+      await loadChangedFiles(path, requestId);
     } catch (error) {
+      if (repoRequestId.current !== requestId) {
+        return;
+      }
+
       setInspectionError(
         errorMessage(error, "Unable to inspect the selected repository."),
       );
     } finally {
-      setIsInspecting(false);
+      if (repoRequestId.current === requestId) {
+        setIsInspecting(false);
+      }
     }
   }
 
@@ -105,7 +134,7 @@ export default function App() {
     }
 
     clearSelectedDiff();
-    await loadChangedFiles(repoSummary.repo_path);
+    await loadChangedFiles(repoSummary.repo_path, repoRequestId.current);
   }
 
   async function handleSelectChangedFile(file: ChangedFile) {
@@ -268,3 +297,4 @@ export default function App() {
     </main>
   );
 }
+
