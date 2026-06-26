@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { ChangedFilesPanel } from "./features/changed-files/ChangedFilesPanel";
+import { DiffViewerPanel } from "./features/diff-viewer/DiffViewerPanel";
 import { RepoPicker } from "./features/repo-picker/RepoPicker";
 import {
+  getFileDiff,
   inspectRepo,
   listChangedFiles,
   type ChangedFile,
@@ -13,7 +15,7 @@ const milestoneItems = [
   "Inspect local Git repositories",
   "Read current branch and working tree state",
   "List changed files with status metadata",
-  "Refresh changed files manually",
+  "Display selected file diffs read-only",
 ];
 
 function errorMessage(error: unknown, fallback: string) {
@@ -38,6 +40,20 @@ export default function App() {
     null,
   );
   const [isLoadingChangedFiles, setIsLoadingChangedFiles] = useState(false);
+  const [selectedChangedFile, setSelectedChangedFile] =
+    useState<ChangedFile | null>(null);
+  const [diffText, setDiffText] = useState<string | null>(null);
+  const [diffError, setDiffError] = useState<string | null>(null);
+  const [isLoadingDiff, setIsLoadingDiff] = useState(false);
+  const diffRequestId = useRef(0);
+
+  function clearSelectedDiff() {
+    diffRequestId.current += 1;
+    setSelectedChangedFile(null);
+    setDiffText(null);
+    setDiffError(null);
+    setIsLoadingDiff(false);
+  }
 
   async function loadChangedFiles(repoPath: string) {
     setIsLoadingChangedFiles(true);
@@ -64,6 +80,7 @@ export default function App() {
     setInspectionError(null);
     setChangedFiles([]);
     setChangedFilesError(null);
+    clearSelectedDiff();
     setIsInspecting(true);
     setIsLoadingChangedFiles(false);
 
@@ -86,7 +103,43 @@ export default function App() {
       return;
     }
 
+    clearSelectedDiff();
     await loadChangedFiles(repoSummary.repo_path);
+  }
+
+  async function handleSelectChangedFile(file: ChangedFile) {
+    if (!repoSummary) {
+      return;
+    }
+
+    const requestId = diffRequestId.current + 1;
+    diffRequestId.current = requestId;
+    setSelectedChangedFile(file);
+    setDiffText(null);
+    setDiffError(null);
+    setIsLoadingDiff(true);
+
+    try {
+      const diff = await getFileDiff(repoSummary.repo_path, file.file_path);
+
+      if (diffRequestId.current !== requestId) {
+        return;
+      }
+
+      setDiffText(diff);
+    } catch (error) {
+      if (diffRequestId.current !== requestId) {
+        return;
+      }
+
+      setDiffError(
+        errorMessage(error, "Unable to load the diff for the selected file."),
+      );
+    } finally {
+      if (diffRequestId.current === requestId) {
+        setIsLoadingDiff(false);
+      }
+    }
   }
 
   return (
@@ -101,9 +154,9 @@ export default function App() {
         </h1>
 
         <p className="mt-4 max-w-2xl text-base leading-7 text-zinc-400">
-          Milestone 2 focuses on Git status and changed-file metadata: selecting
-          a repository, reading its current state, and refreshing the file list
-          on demand. No diffs, no staging actions, no AI, and no cloud.
+          Milestone 3 focuses on read-only diff review: selecting a repository,
+          reading its current changed files, and opening a unified diff for one
+          file at a time. No staging actions, editing, AI, or cloud.
         </p>
 
         <RepoPicker selectedPath={selectedPath} onSelectPath={handleSelectPath} />
@@ -175,12 +228,23 @@ export default function App() {
         </div>
 
         {repoSummary && (
-          <ChangedFilesPanel
-            files={changedFiles}
-            error={changedFilesError}
-            isLoading={isLoadingChangedFiles}
-            onRefresh={handleRefreshChangedFiles}
-          />
+          <>
+            <ChangedFilesPanel
+              files={changedFiles}
+              error={changedFilesError}
+              isLoading={isLoadingChangedFiles}
+              selectedFilePath={selectedChangedFile?.file_path ?? null}
+              onSelectFile={handleSelectChangedFile}
+              onRefresh={handleRefreshChangedFiles}
+            />
+
+            <DiffViewerPanel
+              selectedFile={selectedChangedFile}
+              diffText={diffText}
+              error={diffError}
+              isLoading={isLoadingDiff}
+            />
+          </>
         )}
 
         <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">

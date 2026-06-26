@@ -33,3 +33,8 @@ export function inspectRepo(repoPath: string) {
 export function listChangedFiles(repoPath: string): Promise<ChangedFile[]> {
   return invoke<ChangedFile[]>("list_changed_files", { repoPath });
 }
+
+export function getFileDiff(repoPath: string, filePath: string): Promise<string> {
+  return invoke<string>("get_file_diff", { repoPath, filePath });
+}
+

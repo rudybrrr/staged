@@ -4,6 +4,8 @@ type ChangedFilesPanelProps = {
   files: ChangedFile[];
   error: string | null;
   isLoading: boolean;
+  selectedFilePath: string | null;
+  onSelectFile: (file: ChangedFile) => void;
   onRefresh: () => void;
 };
 
@@ -57,6 +59,8 @@ export function ChangedFilesPanel({
   files,
   error,
   isLoading,
+  selectedFilePath,
+  onSelectFile,
   onRefresh,
 }: ChangedFilesPanelProps) {
   return (
@@ -99,47 +103,56 @@ export function ChangedFilesPanel({
       )}
 
       {!isLoading && !error && files.length > 0 && (
-        <ul className="mt-5 divide-y divide-zinc-800 rounded-lg border border-zinc-800 bg-zinc-950">
+        <ul className="mt-5 divide-y divide-zinc-800 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
           {files.map((file) => {
             const indicators = fileIndicators(file);
             const showOldPath =
               file.old_file_path &&
               (file.status === "renamed" || file.status === "copied");
+            const isSelected = selectedFilePath === file.file_path;
 
             return (
-              <li key={`${file.status}:${file.file_path}`} className="p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="break-all font-mono text-sm text-zinc-100">
-                      {file.file_path}
-                    </p>
-
-                    {showOldPath && (
-                      <p className="mt-2 break-all font-mono text-xs text-zinc-500">
-                        from {file.old_file_path}
+              <li key={`${file.status}:${file.file_path}`}>
+                <button
+                  type="button"
+                  onClick={() => onSelectFile(file)}
+                  className={`w-full p-4 text-left transition hover:bg-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 ${
+                    isSelected ? "bg-zinc-900 ring-1 ring-inset ring-zinc-600" : ""
+                  }`}
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="break-all font-mono text-sm text-zinc-100">
+                        {file.file_path}
                       </p>
-                    )}
-                  </div>
 
-                  <div className="flex flex-wrap gap-2 sm:justify-end">
-                    <span
-                      className={`rounded-full border px-2.5 py-1 text-xs font-medium ${statusClassName(
-                        file.status,
-                      )}`}
-                    >
-                      {statusLabels[file.status]}
-                    </span>
+                      {showOldPath && (
+                        <p className="mt-2 break-all font-mono text-xs text-zinc-500">
+                          from {file.old_file_path}
+                        </p>
+                      )}
+                    </div>
 
-                    {indicators.map((indicator) => (
+                    <div className="flex flex-wrap gap-2 sm:justify-end">
                       <span
-                        key={indicator}
-                        className="rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs font-medium text-zinc-300"
+                        className={`rounded-full border px-2.5 py-1 text-xs font-medium ${statusClassName(
+                          file.status,
+                        )}`}
                       >
-                        {indicator}
+                        {statusLabels[file.status]}
                       </span>
-                    ))}
+
+                      {indicators.map((indicator) => (
+                        <span
+                          key={indicator}
+                          className="rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs font-medium text-zinc-300"
+                        >
+                          {indicator}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                </button>
               </li>
             );
           })}
