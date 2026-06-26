@@ -34,8 +34,8 @@ export function RepoPicker({ selectedPath, onSelectPath }: RepoPickerProps) {
       <h2 className="text-lg font-medium">Choose a repository folder</h2>
 
       <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">
-        Select a local folder for Staged to inspect. Git validation will happen
-        in the next step; this only records the selected path.
+        Select a local Git repository for Staged to inspect. Repository details
+        and changed files will load after selection.
       </p>
 
       <button

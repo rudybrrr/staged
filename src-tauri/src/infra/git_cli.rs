@@ -45,10 +45,30 @@ pub fn has_uncommitted_changes(repo_path: &str) -> Result<bool, String> {
 }
 
 pub fn porcelain_status(repo_path: &str) -> Result<String, String> {
-    run_git(repo_path, &["status", "--porcelain=v1"])
+    run_git_preserving_leading_whitespace(
+        repo_path,
+        &["status", "--porcelain=v1", "--untracked-files=all"],
+    )
 }
 
 fn run_git(repo_path: &str, args: &[&str]) -> Result<String, String> {
+    run_git_with_stdout(repo_path, args, |stdout| stdout.trim().to_string())
+}
+
+fn run_git_preserving_leading_whitespace(repo_path: &str, args: &[&str]) -> Result<String, String> {
+    run_git_with_stdout(repo_path, args, |stdout| {
+        stdout.trim_end_matches(&['\r', '\n'][..]).to_string()
+    })
+}
+
+fn run_git_with_stdout<F>(
+    repo_path: &str,
+    args: &[&str],
+    normalize_stdout: F,
+) -> Result<String, String>
+where
+    F: FnOnce(&str) -> String,
+{
     let output = Command::new("git")
         .arg("-C")
         .arg(repo_path)
@@ -57,8 +77,8 @@ fn run_git(repo_path: &str, args: &[&str]) -> Result<String, String> {
         .map_err(|error| format!("Failed to run git: {error}"))?;
 
     if output.status.success() {
-        let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        Ok(stdout)
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        Ok(normalize_stdout(&stdout))
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
 

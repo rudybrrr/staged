@@ -87,3 +87,37 @@ fn status_from_code(status: char) -> &'static str {
         _ => "unknown",
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::parse_porcelain_status_line;
+
+    #[test]
+    fn parses_staged_modified_path() {
+        let file = parse_porcelain_status_line("M  README.md").expect("status line parses");
+
+        assert_eq!(file.file_path, "README.md");
+        assert_eq!(file.status, "modified");
+        assert!(file.is_staged);
+        assert!(!file.is_unstaged);
+    }
+
+    #[test]
+    fn parses_unstaged_modified_path_without_dropping_first_character() {
+        let file = parse_porcelain_status_line(" M README.md").expect("status line parses");
+
+        assert_eq!(file.file_path, "README.md");
+        assert_eq!(file.status, "modified");
+        assert!(!file.is_staged);
+        assert!(file.is_unstaged);
+    }
+
+    #[test]
+    fn parses_untracked_path() {
+        let file = parse_porcelain_status_line("?? temp.txt").expect("status line parses");
+
+        assert_eq!(file.file_path, "temp.txt");
+        assert_eq!(file.status, "untracked");
+        assert!(file.is_untracked);
+    }
+}

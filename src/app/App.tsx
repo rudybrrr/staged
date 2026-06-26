@@ -1,40 +1,92 @@
 import { useState } from "react";
 
+import { ChangedFilesPanel } from "./features/changed-files/ChangedFilesPanel";
 import { RepoPicker } from "./features/repo-picker/RepoPicker";
-import { inspectRepo, type RepoSummary } from "./lib/repo";
+import {
+  inspectRepo,
+  listChangedFiles,
+  type ChangedFile,
+  type RepoSummary,
+} from "./lib/repo";
 
 const milestoneItems = [
-  "Open Windows desktop app",
-  "Pick a local folder",
-  "Validate Git repository",
-  "Read current branch",
-  "Detect uncommitted changes",
+  "Inspect local Git repositories",
+  "Read current branch and working tree state",
+  "List changed files with status metadata",
+  "Refresh changed files manually",
 ];
+
+function errorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  return fallback;
+}
 
 export default function App() {
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [repoSummary, setRepoSummary] = useState<RepoSummary | null>(null);
   const [inspectionError, setInspectionError] = useState<string | null>(null);
   const [isInspecting, setIsInspecting] = useState(false);
+  const [changedFiles, setChangedFiles] = useState<ChangedFile[]>([]);
+  const [changedFilesError, setChangedFilesError] = useState<string | null>(
+    null,
+  );
+  const [isLoadingChangedFiles, setIsLoadingChangedFiles] = useState(false);
+
+  async function loadChangedFiles(repoPath: string) {
+    setIsLoadingChangedFiles(true);
+    setChangedFilesError(null);
+
+    try {
+      const files = await listChangedFiles(repoPath);
+      setChangedFiles(files);
+    } catch (error) {
+      setChangedFilesError(
+        errorMessage(
+          error,
+          "Unable to list changed files for the selected repository.",
+        ),
+      );
+    } finally {
+      setIsLoadingChangedFiles(false);
+    }
+  }
 
   async function handleSelectPath(path: string) {
     setSelectedPath(path);
     setRepoSummary(null);
     setInspectionError(null);
+    setChangedFiles([]);
+    setChangedFilesError(null);
     setIsInspecting(true);
+    setIsLoadingChangedFiles(false);
 
     try {
       const summary = await inspectRepo(path);
       setRepoSummary(summary);
+      setIsInspecting(false);
+      await loadChangedFiles(path);
     } catch (error) {
       setInspectionError(
-        error instanceof Error
-          ? error.message
-          : "Unable to inspect the selected repository.",
+        errorMessage(error, "Unable to inspect the selected repository."),
       );
     } finally {
       setIsInspecting(false);
     }
+  }
+
+  async function handleRefreshChangedFiles() {
+    if (!repoSummary) {
+      return;
+    }
+
+    await loadChangedFiles(repoSummary.repo_path);
   }
 
   return (
@@ -49,9 +101,9 @@ export default function App() {
         </h1>
 
         <p className="mt-4 max-w-2xl text-base leading-7 text-zinc-400">
-          Milestone 1 focuses on the local verification spine: selecting a Git
-          repository, reading its branch, and detecting uncommitted changes. No
-          AI, no RAG, no cloud, no auto-fixing.
+          Milestone 2 focuses on Git status and changed-file metadata: selecting
+          a repository, reading its current state, and refreshing the file list
+          on demand. No diffs, no staging actions, no AI, and no cloud.
         </p>
 
         <RepoPicker selectedPath={selectedPath} onSelectPath={handleSelectPath} />
@@ -122,8 +174,17 @@ export default function App() {
           )}
         </div>
 
+        {repoSummary && (
+          <ChangedFilesPanel
+            files={changedFiles}
+            error={changedFilesError}
+            isLoading={isLoadingChangedFiles}
+            onRefresh={handleRefreshChangedFiles}
+          />
+        )}
+
         <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
-          <h2 className="text-lg font-medium">Milestone 1 target</h2>
+          <h2 className="text-lg font-medium">Current milestone target</h2>
 
           <ul className="mt-4 space-y-3">
             {milestoneItems.map((item) => (
