@@ -12,9 +12,9 @@ Local-first verification before commit.
 
 ## Current milestone
 
-Milestone 3: Diff Viewer.
+Milestone 4: Configurable Command Runner.
 
-Milestones 1, 2, and 3 are implemented. Staged can select a local Git repository, validate repository state, show repo metadata, list changed files, and display read-only unified diffs for selected changed files without AI.
+Milestones 1, 2, 3, and 4 are implemented. Staged can select a local Git repository, validate repository state, show repo metadata, list changed files, display read-only unified diffs for selected changed files, and run allowlisted verification commands without AI.
 
 ## Current implementation status
 
@@ -57,10 +57,26 @@ Implemented:
 - Error state when diff retrieval fails.
 - No-diff state for untracked files or files with no available Git diff.
 - Selected diff clears on repo switch and refresh.
+- Rust Tauri command `run_repo_command`.
+- Strict command ID allowlist: `npm_test`, `npm_lint`, and `npm_typecheck`.
+- No arbitrary shell command input.
+- Commands run inside the selected Git repository.
+- Windows-compatible npm executable handling.
+- Captured stdout, stderr, exit code, and duration in milliseconds.
+- Success/failure command result based on exit code.
+- Non-zero exit codes return valid command results instead of app errors.
+- Frontend command runner panel.
+- Read-only stdout/stderr output blocks.
+- Command loading, success, failure, and error states.
+- Rust Tauri command `get_available_repo_commands`.
+- Repo-aware command availability detection from the root `package.json`.
+- Disabled unavailable command buttons with reasons.
+- Empty state when no supported npm scripts are found.
+- Command runner state clears when switching repos or selecting invalid folders.
 
 Not implemented yet:
 
-- Command runner.
+- Workspace or nested package command detection.
 - Pre-Stage Screening.
 - Risk classifier.
 - Stage Payload.

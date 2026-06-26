@@ -1,12 +1,12 @@
 # Milestone 4: Configurable Command Runner
 
-Status: Planned.
+Status: Implemented.
 
 ## Goal
 
 Allow the user to run local verification commands, such as test, lint, and typecheck commands, against the selected repository and capture deterministic execution results before any AI review.
 
-Milestone 4 builds on the repo inspection, changed-files list, and diff viewer by adding a narrow local command execution surface. The command runner collects evidence from configured verification commands and displays the result in the app.
+Milestone 4 builds on the repo inspection, changed-files list, and diff viewer by adding a narrow local command execution surface. The implemented command runner collects evidence from configured verification commands and displays the result in the app.
 
 This milestone is intentionally narrow. It does not include arbitrary command input, background jobs, streaming output, persistence, staging workflows, or AI features.
 
@@ -37,39 +37,51 @@ Milestone 3 is complete and supports:
 - Selecting a changed file.
 - Displaying a read-only unified diff for the selected changed file.
 
-Milestone 4 should make local verification commands runnable and inspectable before any later screening or AI review work.
+Milestone 4 makes local verification commands runnable and inspectable before any later screening or AI review work.
 
-## In Scope
+## Implemented
 
 Backend:
 
-- Backend Tauri command conceptually named `run_repo_command`.
-- Rust/Tauri backend command execution.
-- Allowlisted local command execution inside the selected repository.
-- Capture command text.
+- Backend Tauri command `run_repo_command`.
+- Backend Tauri command `get_available_repo_commands`.
+- Strict allowlisted local command execution inside the selected repository.
+- Command IDs: `npm_test`, `npm_lint`, and `npm_typecheck`.
+- No arbitrary shell command input.
+- Windows-compatible npm executable handling.
+- Repo-aware command availability detection from the root `package.json`.
 - Capture stdout.
 - Capture stderr.
 - Capture exit code.
 - Capture duration in milliseconds.
 - Return pass/fail status based on exit code.
-- Clear error return if command execution fails.
+- Non-zero exit codes return valid command results instead of app errors.
+- Clear error return if process launch or command execution fails before a result is available.
 
 Frontend:
 
-- Frontend helper conceptually named `runRepoCommand(repoPath, commandId)`.
+- Frontend helper for running repo commands.
 - Command runner panel.
-- Buttons for configured MVP commands.
+- Buttons for configured MVP command IDs.
+- Disabled unavailable command buttons with reasons.
 - Loading state while a command is running.
 - Success state for exit code `0`.
 - Failure state for non-zero exit code.
 - Error state if command execution fails.
-- Read-only command output.
+- Read-only stdout/stderr output blocks.
+- Empty state when no supported npm scripts are found.
+- Command runner state clears when switching repos or selecting invalid folders.
 
 Configured MVP commands:
 
-- `npm test`
-- `npm run lint`
-- `npm run typecheck`
+- `npm_test` -> `npm test`
+- `npm_lint` -> `npm run lint`
+- `npm_typecheck` -> `npm run typecheck`
+
+Current package detection:
+
+- Command availability is detected from scripts in the selected repository's root `package.json`.
+- Workspace and nested package detection is not implemented yet.
 
 ## Out of Scope
 
@@ -81,6 +93,7 @@ The following are outside Milestone 4 and should not be added:
 - Streaming output.
 - Killing running commands.
 - Command history persistence.
+- Workspace or nested package command detection.
 - SQLite.
 - Pre-Stage Screening.
 - Risk classifier.
@@ -126,17 +139,11 @@ type CommandResult = {
 };
 ```
 
-Frontend helper:
-
-```ts
-runRepoCommand(repoPath, commandId)
-```
-
 The backend owns process execution details. The frontend invokes the configured command by ID and renders the returned result.
 
 ## Command Allowlist
 
-Milestone 4 should support a small command allowlist:
+Milestone 4 supports a small command allowlist:
 
 ```text
 npm_test      -> npm test
@@ -150,7 +157,7 @@ Expected behavior:
 - Commands run with the selected repository as the working directory.
 - Commands do not run for invalid or missing repository paths.
 - Exit code `0` returns `success: true`.
-- Non-zero exit codes return `success: false`.
+- Non-zero exit codes return valid command results with `success: false`.
 - Process launch failures return an error state for the UI.
 
 ## UI Behavior
@@ -170,9 +177,12 @@ The panel shows:
 
 The command output is read-only.
 
+Command availability is detected from the selected repository's root `package.json`. Unsupported or missing scripts are shown as disabled commands with reasons. Workspace and nested package detection is not implemented yet.
+
 Empty state:
 
 - Before any command has run, show a neutral empty state.
+- If no supported npm scripts are found, show a clear empty state.
 
 Loading state:
 
@@ -198,13 +208,15 @@ React UI
   ->
 Command button click
   ->
-Frontend runRepoCommand(repoPath, commandId)
+Frontend command runner helper
   ->
 Tauri invoke
   ->
 Rust command run_repo_command(repo_path, command_id)
   ->
 Allowlist maps command_id to command arguments
+  ->
+Root package.json availability check
   ->
 Process runs inside selected repository
   ->
@@ -239,9 +251,21 @@ Read-only command result panel
 ### Missing package script
 
 1. Select a valid Git repository missing one configured package script.
-2. Run the missing-script command.
-3. Confirm stderr and failure state are displayed.
+2. Confirm the missing-script command is disabled.
+3. Confirm the disabled state includes a reason.
 4. Confirm the app does not crash.
+
+### No supported package scripts
+
+1. Select a valid Git repository with no supported `test`, `lint`, or `typecheck` root `package.json` scripts.
+2. Confirm the command runner shows a clear empty state.
+3. Confirm no command can be run.
+
+### Root package detection boundary
+
+1. Select a valid Git repository where a supported script exists only in a nested package or workspace package.
+2. Confirm the command is not treated as available unless it exists in the root `package.json`.
+3. Confirm workspace and nested package detection are not presented as implemented.
 
 ### Invalid repository
 
@@ -258,13 +282,16 @@ Read-only command result panel
 
 ## Definition of Done
 
-- Backend command runner exists and passes `cargo check`.
+- Backend command runner exists.
 - Frontend can run configured commands for the selected repo.
 - stdout, stderr, exit code, duration, and pass/fail state are visible.
 - Command output is read-only.
+- Command availability is detected from root `package.json`.
+- Unavailable command buttons are disabled with reasons.
 - No arbitrary shell input has been added.
 - No Pre-Stage Screening or AI-related features have been added.
 
 ## Notes
 
 Milestone 4 is an execution evidence milestone. It should collect deterministic local command results before later milestones introduce screening, risk analysis, payload construction, reports, or AI-assisted review.
+
