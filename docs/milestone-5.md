@@ -1,14 +1,14 @@
 # Milestone 5: Pre-Stage Screening
 
-Status: Planned.
+Status: Implemented.
 
 ## Goal
 
 Add a deterministic local screening panel that summarizes the evidence Staged has already collected before any Stage Payload or AI review exists.
 
-Milestone 5 builds on repository inspection, changed-file listing, diff viewing, and configurable command execution. It should organize local facts, command results, and simple deterministic warnings before any LLM is involved.
+Milestone 5 builds on repository inspection, changed-file listing, diff viewing, and configurable command execution. It organizes local facts, command results, and simple deterministic warnings before any LLM is involved.
 
-This milestone is intentionally narrow. It does not include AI review, risk classification, Stage Payload construction, staging workflows, persistence, or new command execution behavior.
+This milestone is intentionally narrow and is now implemented. It does not include AI review, risk classification, Stage Payload construction, staging workflows, persistence, or new command execution behavior.
 
 ## Product Context
 
@@ -43,20 +43,21 @@ Milestone 4 is complete and supports:
 - Running allowlisted local verification commands.
 - Displaying stdout, stderr, exit code, duration, and success/failure state.
 
-Milestone 5 makes the existing local evidence easier to understand before later milestones introduce AI review or Stage Payload features.
+Milestone 5 is complete and makes the existing local evidence easier to understand before later milestones introduce AI review or Stage Payload features.
 
-## In Scope
+## Implemented
 
 Frontend:
 
 - Frontend Pre-Stage Screening panel.
-- Read-only deterministic findings derived from existing app state.
-- Summary of selected repository metadata.
-- Summary of changed files.
-- Summary of file status counts.
-- Summary of command runner state.
-- Empty state when no valid repo is selected.
+- Deterministic local findings derived from existing app state.
+- Repo summary in the screening panel.
+- Changed-file count summary.
+- File status count summary.
+- Command runner summary.
+- Read-only UI.
 - Clear separation between deterministic screening and future AI judgment.
+- Stale screening state clears when selecting invalid folders or switching repos.
 
 File status counts:
 
@@ -68,7 +69,7 @@ File status counts:
 - Untracked.
 - Unknown.
 
-Command runner states:
+Command runner summary:
 
 - No commands available.
 - Commands available but not run.
@@ -91,21 +92,24 @@ Finding sources:
 
 ## Deterministic Findings
 
-Milestone 5 should include simple local findings such as:
+Milestone 5 includes local findings for:
 
+- Valid repo selected.
 - No changed files detected.
 - Untracked files present.
 - Deleted files present.
 - Renamed or copied files present.
 - Command checks have not been run.
-- Last command failed.
+- Latest command succeeded.
+- Latest command failed.
+- Command execution error.
 - No supported npm scripts found.
 
-These findings should be deterministic summaries of known local state. They should not infer intent, estimate risk, or provide AI judgment.
+These findings are deterministic summaries of known local state only. They do not infer intent, estimate risk, or provide AI judgment.
 
-## Out of Scope
+## Not Implemented Yet
 
-The following are outside Milestone 5 and should not be added:
+The following are outside the implemented Milestone 5 scope and do not exist yet:
 
 - LLM or AI review.
 - Risk classifier.
@@ -128,33 +132,26 @@ The following are outside Milestone 5 and should not be added:
 
 ## Technical Summary
 
-Add a frontend panel conceptually named `PreStageScreeningPanel`.
+Milestone 5 is implemented in the frontend as a read-only deterministic screening panel.
 
-Add a small typed frontend utility if useful, conceptually named `buildPreStageFindings`.
+The screening logic uses existing app state only:
 
-Use existing app state only:
-
-- Repo summary.
+- Repository summary.
 - Changed files.
 - Command availability.
 - Latest command result.
 - Command error/loading state.
 
-Do not add backend screening logic unless strictly necessary. Do not add AI or Stage Payload logic.
+No AI review, Stage Payload, Stage Report, persistence layer, secret scanning, redaction, or new Git operation is part of this milestone.
 
-Conceptual finding shape:
+Finding levels:
 
-```ts
-type ScreeningFinding = {
-  id: string;
-  level: "pass" | "info" | "warning" | "fail";
-  title: string;
-  detail: string;
-  source: "repo" | "changed_files" | "command_runner";
-};
-```
+- `pass`.
+- `info`.
+- `warning`.
+- `fail`.
 
-Expected behavior:
+Implemented behavior:
 
 - The panel updates when repo selection changes.
 - The panel updates when changed files refresh.
@@ -167,13 +164,13 @@ Expected behavior:
 
 The Pre-Stage Screening panel appears as a deterministic evidence summary for a valid selected repository.
 
-The panel should show:
+The panel shows:
 
 - Repository metadata summary.
 - Changed-file summary.
 - File status counts.
 - Command runner state summary.
-- Findings grouped or listed with visible level and source.
+- Findings with visible level and source.
 
 Empty state:
 
@@ -182,9 +179,9 @@ Empty state:
 
 Deterministic boundary:
 
-- Use copy that makes clear the panel is deterministic local screening.
-- Do not present findings as AI judgment.
-- Do not include Stage Payload, Stage Report, or risk-classifier language.
+- The panel copy makes clear that screening is deterministic local evidence only.
+- Findings are not presented as AI judgment.
+- Stage Payload, Stage Report, and risk-classifier features are not present.
 
 ## Architecture
 
@@ -200,7 +197,7 @@ PreStageScreeningPanel
 Read-only deterministic evidence summary
 ```
 
-The frontend owns Milestone 5 screening presentation. Backend behavior should remain unchanged unless existing state is insufficient for the panel.
+The frontend owns Milestone 5 screening presentation. Backend behavior remains focused on repository inspection, changed files, diffs, command availability, and command execution.
 
 ## Manual Test Plan
 

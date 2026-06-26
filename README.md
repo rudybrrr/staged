@@ -12,9 +12,9 @@ Local-first verification before commit.
 
 ## Current milestone
 
-Milestone 4: Configurable Command Runner.
+Milestone 5: Pre-Stage Screening.
 
-Milestones 1, 2, 3, and 4 are implemented. Staged can select a local Git repository, validate repository state, show repo metadata, list changed files, display read-only unified diffs for selected changed files, and run allowlisted verification commands without AI.
+Milestones 1, 2, 3, 4, and 5 are implemented. Staged can select a local Git repository, validate repository state, show repo metadata, list changed files, display read-only unified diffs for selected changed files, run allowlisted verification commands, and show deterministic pre-stage screening findings without AI.
 
 ## Current implementation status
 
@@ -73,17 +73,30 @@ Implemented:
 - Disabled unavailable command buttons with reasons.
 - Empty state when no supported npm scripts are found.
 - Command runner state clears when switching repos or selecting invalid folders.
+- Frontend Pre-Stage Screening panel.
+- Deterministic local findings built from existing app state.
+- Repo summary in the screening panel.
+- Changed-file count summary.
+- File status counts for added, modified, deleted, renamed, copied, untracked, and unknown files.
+- Command runner summary in the screening panel.
+- Screening findings with `pass`, `info`, `warning`, and `fail` levels.
+- Findings for valid repo selection, no changed files, untracked files, deleted files, renamed/copied files, command checks not run, latest command success, latest command failure, command execution error, and no supported npm scripts.
+- Read-only screening UI.
+- Clear separation between deterministic screening and future AI review.
+- Screening panel clears stale state when selecting invalid folders or switching repos.
 
 Not implemented yet:
 
 - Workspace or nested package command detection.
-- Pre-Stage Screening.
 - Risk classifier.
 - Stage Payload.
 - Token Budget.
 - Staging Ground.
 - Stage Report.
+- Secret scanning.
+- Redaction.
 - SQLite.
+- Stage History.
 - AI features.
 - RAG.
 - Tree-sitter.
