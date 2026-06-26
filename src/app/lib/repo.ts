@@ -26,6 +26,16 @@ export type ChangedFile = {
   is_untracked: boolean;
 };
 
+export type CommandResult = {
+  command_id: string;
+  command: string;
+  stdout: string;
+  stderr: string;
+  exit_code: number | null;
+  duration_ms: number;
+  success: boolean;
+};
+
 export function inspectRepo(repoPath: string) {
   return invoke<RepoSummary>("inspect_repo", { repoPath });
 }
@@ -38,3 +48,9 @@ export function getFileDiff(repoPath: string, filePath: string): Promise<string>
   return invoke<string>("get_file_diff", { repoPath, filePath });
 }
 
+export function runRepoCommand(
+  repoPath: string,
+  commandId: "npm_test" | "npm_lint" | "npm_typecheck",
+): Promise<CommandResult> {
+  return invoke<CommandResult>("run_repo_command", { repoPath, commandId });
+}

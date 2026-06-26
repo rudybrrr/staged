@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 
 import { ChangedFilesPanel } from "./features/changed-files/ChangedFilesPanel";
+import { CommandRunnerPanel } from "./features/command-runner/CommandRunnerPanel";
 import { DiffViewerPanel } from "./features/diff-viewer/DiffViewerPanel";
 import { RepoPicker } from "./features/repo-picker/RepoPicker";
 import {
@@ -244,6 +245,10 @@ export default function App() {
               error={diffError}
               isLoading={isLoadingDiff}
             />
+
+            {repoSummary.is_git_repo && (
+              <CommandRunnerPanel repoPath={repoSummary.repo_path} />
+            )}
           </>
         )}
 
