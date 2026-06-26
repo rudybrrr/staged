@@ -10,6 +10,16 @@ import {
 
 type CommandRunnerPanelProps = {
   repoPath: string;
+  onStateChange?: (state: CommandRunnerState) => void;
+};
+
+export type CommandRunnerState = {
+  availableCommands: AvailableCommand[];
+  isLoadingCommands: boolean;
+  availabilityError: string | null;
+  latestCommandResult: CommandResult | null;
+  error: string | null;
+  isRunning: boolean;
 };
 
 function errorMessage(error: unknown, fallback: string) {
@@ -30,7 +40,10 @@ function resultStatusClassName(success: boolean) {
     : "border-red-900/70 bg-red-950/40 text-red-200";
 }
 
-export function CommandRunnerPanel({ repoPath }: CommandRunnerPanelProps) {
+export function CommandRunnerPanel({
+  repoPath,
+  onStateChange,
+}: CommandRunnerPanelProps) {
   const [availableCommands, setAvailableCommands] = useState<
     AvailableCommand[]
   >([]);
@@ -45,6 +58,26 @@ export function CommandRunnerPanel({ repoPath }: CommandRunnerPanelProps) {
   );
   const availabilityRequestId = useRef(0);
   const commandRequestId = useRef(0);
+  const isRunning = runningCommandId !== null;
+
+  useEffect(() => {
+    onStateChange?.({
+      availableCommands,
+      isLoadingCommands,
+      availabilityError,
+      latestCommandResult: result,
+      error,
+      isRunning,
+    });
+  }, [
+    availableCommands,
+    availabilityError,
+    error,
+    isLoadingCommands,
+    isRunning,
+    onStateChange,
+    result,
+  ]);
 
   useEffect(() => {
     const currentRequestId = availabilityRequestId.current + 1;
@@ -125,7 +158,6 @@ export function CommandRunnerPanel({ repoPath }: CommandRunnerPanelProps) {
     }
   }
 
-  const isRunning = runningCommandId !== null;
   const hasCommands = availableCommands.length > 0;
   const hasAvailableCommands = availableCommands.some(
     (command) => command.available,

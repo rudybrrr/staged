@@ -1,8 +1,12 @@
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { ChangedFilesPanel } from "./features/changed-files/ChangedFilesPanel";
-import { CommandRunnerPanel } from "./features/command-runner/CommandRunnerPanel";
+import {
+  CommandRunnerPanel,
+  type CommandRunnerState,
+} from "./features/command-runner/CommandRunnerPanel";
 import { DiffViewerPanel } from "./features/diff-viewer/DiffViewerPanel";
+import { PreStageScreeningPanel } from "./features/pre-stage-screening/PreStageScreeningPanel";
 import { RepoPicker } from "./features/repo-picker/RepoPicker";
 import {
   getFileDiff,
@@ -31,6 +35,17 @@ function errorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+function createInitialCommandRunnerState(): CommandRunnerState {
+  return {
+    availableCommands: [],
+    isLoadingCommands: false,
+    availabilityError: null,
+    latestCommandResult: null,
+    error: null,
+    isRunning: false,
+  };
+}
+
 export default function App() {
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [repoSummary, setRepoSummary] = useState<RepoSummary | null>(null);
@@ -46,6 +61,14 @@ export default function App() {
   const [diffText, setDiffText] = useState<string | null>(null);
   const [diffError, setDiffError] = useState<string | null>(null);
   const [isLoadingDiff, setIsLoadingDiff] = useState(false);
+  const [commandRunnerState, setCommandRunnerState] =
+    useState<CommandRunnerState>(() => createInitialCommandRunnerState());
+  const handleCommandRunnerStateChange = useCallback(
+    (state: CommandRunnerState) => {
+      setCommandRunnerState(state);
+    },
+    [],
+  );
   const diffRequestId = useRef(0);
   const repoRequestId = useRef(0);
 
@@ -100,6 +123,7 @@ export default function App() {
     setChangedFiles([]);
     setChangedFilesError(null);
     clearSelectedDiff();
+    setCommandRunnerState(createInitialCommandRunnerState());
     setIsInspecting(true);
     setIsLoadingChangedFiles(false);
 
@@ -257,6 +281,17 @@ export default function App() {
           )}
         </div>
 
+        <PreStageScreeningPanel
+          repoSummary={repoSummary}
+          changedFiles={changedFiles}
+          availableCommands={commandRunnerState.availableCommands}
+          latestCommandResult={commandRunnerState.latestCommandResult}
+          commandError={commandRunnerState.error}
+          commandAvailabilityError={commandRunnerState.availabilityError}
+          isCommandRunning={commandRunnerState.isRunning}
+          isLoadingCommands={commandRunnerState.isLoadingCommands}
+        />
+
         {repoSummary && (
           <>
             <ChangedFilesPanel
@@ -276,7 +311,10 @@ export default function App() {
             />
 
             {repoSummary.is_git_repo && (
-              <CommandRunnerPanel repoPath={repoSummary.repo_path} />
+              <CommandRunnerPanel
+                repoPath={repoSummary.repo_path}
+                onStateChange={handleCommandRunnerStateChange}
+              />
             )}
           </>
         )}
@@ -297,4 +335,7 @@ export default function App() {
     </main>
   );
 }
+
+
+
 
