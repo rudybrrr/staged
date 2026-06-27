@@ -9,6 +9,7 @@ import { DiffViewerPanel } from "./features/diff-viewer/DiffViewerPanel";
 import { PreStageScreeningPanel } from "./features/pre-stage-screening/PreStageScreeningPanel";
 import { RepoPicker } from "./features/repo-picker/RepoPicker";
 import { StagePayloadPreviewPanel } from "./features/stage-payload/StagePayloadPreviewPanel";
+import { StagingGroundPanel } from "./features/staging-ground/StagingGroundPanel";
 import { TokenBudgetPanel } from "./features/token-budget/TokenBudgetPanel";
 import {
   getFileDiff,
@@ -19,6 +20,7 @@ import {
 } from "./lib/repo";
 import { buildPreStageFindings } from "./lib/screening";
 import { buildStagePayload } from "./lib/stagePayload";
+import { buildStagingGroundReadiness } from "./lib/stagingGround";
 import { buildTokenBudget } from "./lib/tokenBudget";
 
 const milestoneItems = [
@@ -132,6 +134,10 @@ export default function App() {
 
     return buildTokenBudget(stagePayload);
   }, [stagePayload]);
+  const stagingGroundReadiness = useMemo(
+    () => buildStagingGroundReadiness(stagePayload, tokenBudget),
+    [stagePayload, tokenBudget],
+  );
 
   function clearSelectedDiff() {
     diffRequestId.current += 1;
@@ -356,6 +362,11 @@ export default function App() {
         <StagePayloadPreviewPanel payload={stagePayload} />
 
         <TokenBudgetPanel budget={tokenBudget} />
+
+        <StagingGroundPanel
+          hasValidRepo={repoSummary?.is_git_repo ?? false}
+          readiness={stagingGroundReadiness}
+        />
 
         {repoSummary && (
           <>
