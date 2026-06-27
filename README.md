@@ -12,9 +12,9 @@ Local-first verification before commit.
 
 ## Current milestone
 
-Milestone 7: Token Budget Estimate.
+Milestone 8: Staging Ground.
 
-Milestones 1, 2, 3, 4, 5, 6, and 7 are implemented. Staged can select a local Git repository, validate repository state, show repo metadata, list changed files, display read-only unified diffs for selected changed files, run allowlisted verification commands, show deterministic pre-stage screening findings without AI, build a read-only local Stage Payload preview from existing app state, and show a local approximate Token Budget estimate for the current Stage Payload.
+Milestones 1, 2, 3, 4, 5, 6, 7, and 8 are implemented. Staged can select a local Git repository, validate repository state, show repo metadata, list changed files, display read-only unified diffs for selected changed files, run allowlisted verification commands, show deterministic pre-stage screening findings without AI, build a read-only local Stage Payload preview from existing app state, show a local approximate Token Budget estimate for the current Stage Payload, and present a local read-only Staging Ground before any future AI submission.
 
 ## Current implementation status
 
@@ -115,15 +115,28 @@ Implemented:
 - Section percentages.
 - Sections sorted by size.
 - Token Budget warnings for approximate estimation, missing selected-file diff content, changed files listed without diff content, untracked file contents not included, missing command results, missing supported npm scripts, secret redaction not implemented, large payload size, large selected-file diff, and large command output.
+- Frontend `StagingGroundReadiness` type.
+- Frontend `buildStagingGroundReadiness` utility.
+- Read-only Staging Ground panel.
+- Local pre-submission review surface based on the current Stage Payload and Token Budget.
+- Readiness summary for the current Stage Payload.
+- Readiness checklist for Stage Payload, selected-file diff, command result, Token Budget, secret redaction, and AI review availability.
+- Missing-evidence and current-limitation messages.
+- Clear local-preview wording.
+- Clear no-AI-call wording.
+- Disabled/non-functional AI review action area.
+- Explicit blocked state because AI review is not implemented.
+- Explicit blocked state because secret redaction and Safety Gate enforcement are not implemented.
+- Staging Ground state clears when no valid repo or payload exists.
 
 Not implemented yet:
 
 - Workspace or nested package command detection.
 - Risk classifier.
-- Staging Ground.
 - Stage Report.
 - Secret scanning.
 - Redaction.
+- Safety Gate enforcement.
 - SQLite.
 - Stage History.
 - AI features.

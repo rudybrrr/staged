@@ -1,6 +1,6 @@
 # Milestone 8: Staging Ground
 
-Status: Planned.
+Status: Implemented.
 
 ## Goal
 
@@ -8,7 +8,7 @@ Add a local review screen that shows the user what would be prepared for a futur
 
 Milestone 8 makes Staged's privacy-aware and cost-aware workflow visible. It combines the Stage Payload, payload completeness metadata, Token Budget, and current limitations into a clear pre-submission review area.
 
-This milestone is intentionally narrow. It does not send anything to an AI model, does not generate a Stage Report, and does not add submission behavior.
+This milestone is intentionally narrow and is implemented as a local-only, read-only pre-submission review surface. It does not send anything to an AI model, does not generate a Stage Report, and does not add submission behavior.
 
 ## Product Context
 
@@ -30,14 +30,15 @@ Milestone 6 is complete and supports building and previewing a local Stage Paylo
 
 Milestone 7 is complete and supports local Stage Payload size and approximate token estimates with section-level contributions and warnings.
 
-Milestone 8 adds a local Staging Ground review surface that summarizes whether the current evidence is ready to review later, while making clear that AI review and redaction are not implemented yet.
+Milestone 8 is implemented and adds a local Staging Ground review surface that summarizes whether the current evidence is ready to review later, while making clear that AI review, Safety Gate enforcement, and redaction are not implemented yet.
 
-## In Scope
+## Implemented Scope
 
 Frontend:
 
-- Frontend Staging Ground panel, conceptually named `StagingGroundPanel`.
-- Frontend readiness utility if useful, conceptually named `buildStagingGroundReadiness`.
+- Frontend `StagingGroundReadiness` type.
+- Frontend `buildStagingGroundReadiness` utility.
+- Frontend Staging Ground panel.
 - Existing app state only.
 - Read-only UI except for normal existing app interactions.
 - Disabled or non-functional submission area that clearly says AI review is not implemented yet.
@@ -56,6 +57,7 @@ Readiness summary:
 - Show whether AI review is available.
 - Make missing evidence visible instead of hiding it.
 - Make clear this is a local preview and no data is sent anywhere.
+- Show explicit blocked states because AI review and secret redaction/Safety Gate enforcement are not implemented.
 
 State inputs:
 
@@ -91,9 +93,9 @@ The following are not part of Milestone 8:
 
 ## Technical Summary
 
-Milestone 8 should remain frontend-only and use existing state. It should not add backend logic, persistence, API calls, or AI behavior.
+Milestone 8 remains frontend-only and uses existing state. It adds no backend logic, persistence, API calls, submit behavior, or AI behavior.
 
-Conceptual readiness shape:
+Implemented readiness shape:
 
 ```ts
 type StagingGroundReadiness = {
@@ -117,6 +119,12 @@ Expected MVP behavior:
 
 - `redaction_ready` is `false` because secret redaction is not implemented yet.
 - `ai_review_available` is `false` because no AI integration exists yet.
+- The Staging Ground is local only.
+- The Staging Ground is read-only.
+- The Staging Ground is a pre-submission review surface.
+- The Staging Ground is based on the current Stage Payload and Token Budget.
+- The Staging Ground is not an AI review.
+- The Staging Ground is not a Safety Gate yet.
 - The panel does not allow submission.
 - The panel shows missing evidence and limitations explicitly.
 - The panel uses existing local state only.
@@ -155,7 +163,7 @@ The panel shows:
 
 The panel remains read-only. It does not add payload editing, inclusion controls, submission controls, provider selection, model selection, report generation, secret scanning, redaction, or persistence controls.
 
-Stale Staging Ground state must clear when selecting a non-Git folder or switching away from a valid repository.
+Stale Staging Ground state clears when no valid repository or no valid payload exists, including when selecting a non-Git folder or switching away from a valid repository.
 
 ## Architecture
 
@@ -222,9 +230,10 @@ Milestone 8 remains a frontend review layer. Existing backend commands remain fo
 
 ## Definition of Done
 
-- Staging Ground milestone is documented.
-- Frontend Staging Ground panel scope is defined.
-- Optional readiness utility scope is defined.
+- Staging Ground milestone is implemented and documented.
+- Frontend Staging Ground panel is implemented.
+- Frontend `StagingGroundReadiness` type is implemented.
+- Frontend `buildStagingGroundReadiness` utility is implemented.
 - Readiness uses existing app state only.
 - Stage Payload readiness is visible.
 - Payload completeness status is visible.
