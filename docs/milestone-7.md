@@ -1,6 +1,6 @@
 # Milestone 7: Token Budget Estimate
 
-Status: Planned.
+Status: Implemented.
 
 ## Goal
 
@@ -28,13 +28,14 @@ Milestone 5 is complete and supports deterministic Pre-Stage Screening findings.
 
 Milestone 6 is complete and supports building and previewing a local Stage Payload with completeness metadata and limitations.
 
-Milestone 7 estimates the size of that existing Stage Payload locally, without sending it anywhere.
+Milestone 7 is implemented and estimates the size of that existing Stage Payload locally, without sending it anywhere.
 
-## In Scope
+## Implemented
 
 Frontend:
 
-- Frontend Token Budget estimator.
+- Frontend `TokenBudget` type.
+- Frontend `buildTokenBudget` utility.
 - Read-only Token Budget panel.
 - Estimate updates when the Stage Payload changes.
 - Local JavaScript only.
@@ -46,7 +47,7 @@ Estimate:
 - Use the current local `StagePayload` only.
 - Estimate payload characters.
 - Estimate payload bytes.
-- Estimate input tokens using a transparent heuristic such as `Math.ceil(character_count / 4)`.
+- Estimate input tokens using `Math.ceil(character_count / 4)`.
 - Include estimator name `chars_div_4`.
 - Include an estimator note explaining that the estimate is approximate and tokenizer-independent.
 - Use `JSON.stringify(payload)` or section-specific JSON strings for size estimates.
@@ -80,6 +81,8 @@ Warnings:
 - Selected file diff is the largest payload section.
 - Command output is a large payload section.
 
+The estimate is local, approximate, section-aware, and based on the current Stage Payload. It is not model-specific, not a provider pricing estimate, and not an exact tokenizer count.
+
 ## Out of Scope
 
 The following are not part of Milestone 7:
@@ -107,7 +110,7 @@ The following are not part of Milestone 7:
 
 ## Technical Summary
 
-Milestone 7 adds a frontend-only token budget estimate computed from the existing `StagePayload`. The estimate is local, approximate, and model-independent.
+Milestone 7 adds a frontend-only token budget estimate computed from the existing `StagePayload`. The estimate is local, approximate, section-aware, and model-independent.
 
 Conceptual shape:
 
@@ -133,7 +136,7 @@ type TokenBudget = {
 };
 ```
 
-Expected frontend pieces:
+Implemented frontend pieces:
 
 - `TokenBudget` type.
 - `buildTokenBudget` utility.
@@ -168,7 +171,7 @@ The panel shows:
 - Percentage contribution by section.
 - Warnings and known limitations.
 
-The panel is read-only. It does not add model selection, pricing, trimming controls, inclusion controls, approval actions, report generation, or persistence controls.
+The panel is read-only. It does not add model selection, pricing, trimming controls, inclusion controls, approval actions, report generation, AI calls, secret redaction, or persistence controls.
 
 The estimate updates when the Stage Payload changes:
 
@@ -180,6 +183,10 @@ The estimate updates when the Stage Payload changes:
 - Command error changes.
 - Pre-Stage Screening findings change.
 - Payload completeness metadata changes.
+
+## Not Implemented Yet
+
+Milestone 7 does not add an AI call, Staging Ground approval workflow, Stage Report, secret redaction, exact tokenizer, model pricing, or payload trimming.
 
 ## Architecture
 
@@ -244,26 +251,26 @@ Milestone 7 remains a frontend-only estimation layer. Existing backend commands 
 
 ## Definition of Done
 
-- `TokenBudget` type exists.
-- `buildTokenBudget` utility exists.
-- Token Budget panel exists.
-- Estimate is computed locally from `StagePayload`.
-- Total character count is visible.
-- Total byte count is visible.
-- Estimated input token count is visible.
-- Estimator name is visible.
-- Estimator limitation note is visible.
-- Section-level size contribution is visible.
-- Percentage contribution by section is visible.
-- Warnings and estimator limitations are visible.
-- Estimate updates when the Stage Payload changes.
-- No AI integration has been added.
-- No LLM call has been added.
-- No pricing has been added.
-- No exact tokenizer has been added.
-- No tokenizer dependency has been added.
-- No automatic payload trimming has been added.
-- No backend token-budget logic has been added.
+- Done: `TokenBudget` type exists.
+- Done: `buildTokenBudget` utility exists.
+- Done: Token Budget panel exists.
+- Done: Estimate is computed locally from `StagePayload`.
+- Done: Total character count is visible.
+- Done: Total byte count is visible.
+- Done: Estimated input token count is visible.
+- Done: Estimator name is visible.
+- Done: Estimator limitation note is visible.
+- Done: Section-level size contribution is visible.
+- Done: Percentage contribution by section is visible.
+- Done: Warnings and estimator limitations are visible.
+- Done: Estimate updates when the Stage Payload changes.
+- Done: No AI integration has been added.
+- Done: No LLM call has been added.
+- Done: No pricing has been added.
+- Done: No exact tokenizer has been added.
+- Done: No tokenizer dependency has been added.
+- Done: No automatic payload trimming has been added.
+- Done: No backend token-budget logic has been added.
 
 ## Notes
 

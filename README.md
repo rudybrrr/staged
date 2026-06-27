@@ -12,9 +12,9 @@ Local-first verification before commit.
 
 ## Current milestone
 
-Milestone 6: Stage Payload Builder.
+Milestone 7: Token Budget Estimate.
 
-Milestones 1, 2, 3, 4, 5, and 6 are implemented. Staged can select a local Git repository, validate repository state, show repo metadata, list changed files, display read-only unified diffs for selected changed files, run allowlisted verification commands, show deterministic pre-stage screening findings without AI, and build a read-only local Stage Payload preview from existing app state.
+Milestones 1, 2, 3, 4, 5, 6, and 7 are implemented. Staged can select a local Git repository, validate repository state, show repo metadata, list changed files, display read-only unified diffs for selected changed files, run allowlisted verification commands, show deterministic pre-stage screening findings without AI, build a read-only local Stage Payload preview from existing app state, and show a local approximate Token Budget estimate for the current Stage Payload.
 
 ## Current implementation status
 
@@ -102,12 +102,24 @@ Implemented:
 - Payload completeness metadata included to make missing evidence visible.
 - Payload limitations list included.
 - Clear local-preview warning: `Local preview only. No AI call has been made. Secret redaction is not implemented yet.`
+- Frontend `TokenBudget` type.
+- Frontend `buildTokenBudget` utility.
+- Read-only Token Budget panel.
+- Local Token Budget estimate computed from the current Stage Payload.
+- Estimated payload character count.
+- Estimated payload byte count.
+- Estimated token count using `Math.ceil(character_count / 4)`.
+- Estimator name `chars_div_4`.
+- Estimator note explaining the estimate is approximate and tokenizer-independent.
+- Section-level payload size breakdown.
+- Section percentages.
+- Sections sorted by size.
+- Token Budget warnings for approximate estimation, missing selected-file diff content, changed files listed without diff content, untracked file contents not included, missing command results, missing supported npm scripts, secret redaction not implemented, large payload size, large selected-file diff, and large command output.
 
 Not implemented yet:
 
 - Workspace or nested package command detection.
 - Risk classifier.
-- Token Budget.
 - Staging Ground.
 - Stage Report.
 - Secret scanning.
