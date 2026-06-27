@@ -9,6 +9,7 @@ import { DiffViewerPanel } from "./features/diff-viewer/DiffViewerPanel";
 import { PreStageScreeningPanel } from "./features/pre-stage-screening/PreStageScreeningPanel";
 import { RepoPicker } from "./features/repo-picker/RepoPicker";
 import { StagePayloadPreviewPanel } from "./features/stage-payload/StagePayloadPreviewPanel";
+import { TokenBudgetPanel } from "./features/token-budget/TokenBudgetPanel";
 import {
   getFileDiff,
   inspectRepo,
@@ -18,6 +19,7 @@ import {
 } from "./lib/repo";
 import { buildPreStageFindings } from "./lib/screening";
 import { buildStagePayload } from "./lib/stagePayload";
+import { buildTokenBudget } from "./lib/tokenBudget";
 
 const milestoneItems = [
   "Inspect local Git repositories",
@@ -123,6 +125,13 @@ export default function App() {
     screeningFindings,
     selectedChangedFile,
   ]);
+  const tokenBudget = useMemo(() => {
+    if (!stagePayload) {
+      return null;
+    }
+
+    return buildTokenBudget(stagePayload);
+  }, [stagePayload]);
 
   function clearSelectedDiff() {
     diffRequestId.current += 1;
@@ -345,6 +354,8 @@ export default function App() {
         />
 
         <StagePayloadPreviewPanel payload={stagePayload} />
+
+        <TokenBudgetPanel budget={tokenBudget} />
 
         {repoSummary && (
           <>
