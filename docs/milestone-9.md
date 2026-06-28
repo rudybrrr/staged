@@ -1,91 +1,74 @@
 # Milestone 9: Safety Gate and Redaction Preview
 
-Status: Planned.
+Status: Implemented.
 
 ## Goal
 
-Add a local Safety Gate that scans the current Stage Payload for obvious sensitive data patterns and shows a redaction preview before any future AI review is possible.
+Add a local Safety Gate that scans the current Stage Payload and the currently loaded selected-file diff for obvious sensitive data patterns, then shows local findings and a redacted preview before any future AI review is possible.
 
-Milestone 9 makes Staged's privacy-first workflow concrete. Before any AI integration, the app should show whether the payload contains likely secrets or sensitive local information, what would be redacted, and whether the payload is safe enough for future submission.
+Milestone 9 makes Staged's privacy-first workflow concrete. Before any AI integration, the app shows whether currently collected payload evidence contains likely secrets or sensitive local information, what would be redacted, and whether the current payload is blocked, warning, or passing.
 
-This milestone is intentionally narrow. It is a frontend-only MVP scanner over the current Stage Payload text. It does not send data anywhere, does not mutate the original Stage Payload, and does not add AI review or submit behavior.
+This milestone is intentionally narrow. It is a frontend-only MVP pattern scanner. It does not send data anywhere, does not mutate the original Stage Payload, and does not add AI review, Stage Report generation, submit behavior, persistence, backend scanning, or full-repo scanning.
 
 ## Product Context
 
 Staged is a local-first verification workbench for auditing code changes before commit.
 
-Milestone 0 is complete and covers project setup.
+Milestones 1 through 8 are complete and cover repository inspection, changed files, diff viewing, allowlisted command execution, deterministic Pre-Stage Screening, Stage Payload preview, Token Budget estimates, and the local Staging Ground.
 
-Milestone 1 is complete and supports selecting and inspecting a local Git repository.
+Milestone 9 adds the first implemented privacy checkpoint before any future AI submission path can be considered.
 
-Milestone 2 is complete and supports listing changed files.
-
-Milestone 3 is complete and supports displaying read-only file diffs.
-
-Milestone 4 is complete and supports running allowlisted local commands.
-
-Milestone 5 is complete and supports deterministic Pre-Stage Screening findings.
-
-Milestone 6 is complete and supports building and previewing a local Stage Payload with completeness metadata and limitations.
-
-Milestone 7 is complete and supports local Stage Payload size and approximate token estimates with section-level contributions and warnings.
-
-Milestone 8 is complete and adds a local Staging Ground review surface while clearly stating that AI review and redaction are not implemented yet.
-
-Milestone 9 adds the missing privacy checkpoint before any future AI submission path can be considered.
-
-## In Scope
+## Implemented Scope
 
 Frontend:
 
-- Frontend-only Safety Gate for MVP.
 - Frontend `SafetyGateResult` type.
 - Frontend `buildSafetyGateResult` utility.
-- Frontend `SafetyGatePanel`.
-- Compute from the current `StagePayload` only.
-- Use simple deterministic pattern matching.
-- Produce redaction findings.
-- Produce a redacted payload preview.
-- Keep all scanning local.
-- Do not send any data anywhere.
+- Frontend Safety Gate panel.
+- Local deterministic pattern matching.
+- Findings with `pass`, `warning`, and `blocked` Safety Gate statuses.
+- Redacted payload preview.
+- Scan coverage summary.
+- Scanner limitations shown in the UI.
+- Safety Gate status integrated into Staging Ground readiness.
+
+Scanning behavior:
+
+- Scans the serialized Stage Payload JSON.
+- Scans the currently loaded selected-file diff directly.
+- Produces local findings only.
+- Produces a redacted preview with matched sensitive values replaced by `[REDACTED]`.
+- Leaves the original Stage Payload unchanged.
+- Sends no data anywhere.
 
 Detection:
 
-- API keys.
-- Tokens.
-- Passwords.
-- Private keys.
-- `.env` style assignments.
-- Common secret-like field names.
-- Local machine path exposure when practical.
+- Likely secret assignments such as `API_KEY=...`, `TOKEN=...`, `PASSWORD=...`, `SECRET=...`, `PRIVATE_KEY=...`, and `ACCESS_KEY=...`.
+- Private key markers.
+- Local machine path exposure.
 
-Safety Gate status:
+Status behavior:
 
 - `pass` when no likely sensitive patterns are found.
 - `warning` when local paths or scanner limitations are present without obvious secrets.
 - `blocked` when likely secrets, private keys, or passwords are found.
 
-User-facing behavior:
+## Current Boundaries
 
-- Show clear warnings when likely secrets are found.
-- Show clear warning that this is a simple MVP scanner, not a complete security scanner.
-- Show a redacted payload preview with matched sensitive values replaced by `[REDACTED]`.
-- Keep the original Stage Payload preview unchanged.
-- Integrate Safety Gate status into Staging Ground readiness.
+The Safety Gate is still an MVP pattern scanner. It can miss secrets, flag harmless strings, and does not prove that a payload is safe.
 
-## Out of Scope
+The following are not implemented yet:
 
-The following are not part of Milestone 9:
-
+- Backend scanning.
+- Full-repo scanning.
+- Bounded scanning of all changed files.
 - AI review.
 - OpenAI API integration.
 - Stage Report generation.
-- Actual submit behavior.
+- Submit behavior.
 - Provider or model selection.
 - Exact secret scanning engine.
-- Entropy-based detection unless trivial.
-- Full file-system scanning.
-- Scanning files outside the current Stage Payload.
+- Entropy-based detection.
 - Persistent redaction rules.
 - User-editable redaction rules.
 - SQLite.
@@ -95,14 +78,14 @@ The following are not part of Milestone 9:
 - Vector search.
 - GitHub PR integration.
 - Auto-fixing.
-- Backend Safety Gate enforcement.
+- Safety Gate enforcement for a real submission path.
 - New dependencies.
 
 ## Technical Summary
 
-Milestone 9 remains frontend-only and uses the current Stage Payload as its only input. It adds no backend logic, persistence, network calls, API calls, submit behavior, or AI behavior.
+Milestone 9 remains frontend-only. It uses the current Stage Payload and the currently loaded selected-file diff as inputs. It adds no backend logic, persistence, network calls, API calls, submit behavior, or AI behavior.
 
-Conceptual result shape:
+Implemented result shape:
 
 ```ts
 type SafetyGateResult = {
@@ -123,18 +106,12 @@ type SafetyGateResult = {
 };
 ```
 
-Suggested MVP patterns:
-
-- Field names containing `api_key`, `apikey`, `token`, `secret`, `password`, `passwd`, `private_key`, or `access_key`.
-- Assignment-like strings such as `API_KEY=...`, `TOKEN=...`, `PASSWORD=...`, or `SECRET=...`.
-- Private key markers such as `-----BEGIN PRIVATE KEY-----`, `-----BEGIN RSA PRIVATE KEY-----`, or `-----BEGIN OPENSSH PRIVATE KEY-----`.
-- Local Windows path exposure such as `C:/Users/` or `C:\\Users\\`.
-
 Builder behavior:
 
-- Accept the current Stage Payload.
-- Serialize or inspect the Stage Payload text consistently.
-- Apply deterministic pattern matching.
+- Accept the current Stage Payload and selected-file diff state.
+- Serialize the Stage Payload JSON consistently.
+- Apply deterministic pattern matching to the serialized payload.
+- Apply direct pattern matching to the currently loaded selected-file diff.
 - Count matches by finding category.
 - Produce a redacted preview string.
 - Replace matched sensitive values with `[REDACTED]` in the preview only.
@@ -155,8 +132,9 @@ The panel shows:
 - Scan time.
 - Scanner name.
 - Local-only notice.
-- Findings grouped or listed clearly.
+- Findings.
 - Redaction count.
+- Scan coverage summary.
 - Redacted payload preview.
 - Scanner limitations.
 - Warning that this is an MVP pattern scanner, not a complete security scanner.
@@ -165,20 +143,20 @@ The panel remains read-only. It does not add payload editing, persistent redacti
 
 Stale Safety Gate state clears when no valid repository or no valid payload exists, including when selecting a non-Git folder or switching away from a valid repository.
 
-The Staging Ground should treat a blocked Safety Gate status as a blocker once integrated.
+The Staging Ground reflects Safety Gate status while still keeping AI review unavailable. There is no actual submission path or backend enforcement yet.
 
 ## Architecture
 
 ```text
-StagePayload
+StagePayload + currently loaded selected-file diff
   ->
 buildSafetyGateResult
   ->
 SafetyGateResult
   ->
-SafetyGatePanel
+SafetyGatePanel + Staging Ground readiness signal
   ->
-Local redaction preview and readiness signal
+Local findings and redaction preview
 ```
 
 Milestone 9 remains a frontend privacy checkpoint. Existing backend commands remain focused on repository inspection, changed files, diffs, and command execution.
@@ -199,15 +177,18 @@ Milestone 9 remains a frontend privacy checkpoint. Existing backend commands rem
 
 ### Secret-like value
 
-1. Add a fake secret-like value in a changed file or payload-visible text.
-2. Confirm a blocked finding appears.
-3. Confirm the redacted preview replaces the sensitive value with `[REDACTED]`.
-4. Confirm the original Stage Payload preview remains unchanged.
+1. Add `API_KEY=fake_test_key_123` to a changed file.
+2. Load the changed file diff by selecting that file in the changed-files list.
+3. Confirm Safety Gate becomes `blocked`.
+4. Confirm the redacted preview contains `[REDACTED]`.
+5. Confirm the original Stage Payload preview remains unchanged.
+6. Remove the fake secret before committing any real project changes.
 
 ### Staging Ground
 
-1. Confirm Staging Ground reflects Safety Gate status once implemented.
-2. Confirm blocked Safety Gate status is treated as a blocker later.
+1. Confirm Staging Ground reflects the current Safety Gate status.
+2. Confirm AI review remains unavailable.
+3. Confirm no submit behavior is available.
 
 ### Invalid repository
 
@@ -221,15 +202,18 @@ Milestone 9 remains a frontend privacy checkpoint. Existing backend commands rem
 3. Confirm no Stage Report has been added.
 4. Confirm no submit behavior has been added.
 5. Confirm no backend Safety Gate logic has been added.
-6. Confirm no new dependencies have been added.
+6. Confirm no full-repo scanning has been added.
+7. Confirm no persistence has been added.
+8. Confirm no new dependencies have been added.
 
 ## Definition of Done
 
-- Milestone 9 scope is documented.
-- Frontend Safety Gate MVP is planned around the current Stage Payload only.
-- Frontend `SafetyGateResult` type is defined conceptually.
-- Frontend `buildSafetyGateResult` utility is defined conceptually.
-- Frontend `SafetyGatePanel` is defined conceptually.
+- Milestone 9 is implemented.
+- Frontend `SafetyGateResult` type exists.
+- Frontend `buildSafetyGateResult` utility exists.
+- Frontend Safety Gate panel exists.
+- Safety Gate scans serialized Stage Payload JSON.
+- Safety Gate scans the currently loaded selected-file diff directly.
 - Safety Gate status uses `pass`, `warning`, and `blocked`.
 - Likely secrets produce blocked findings.
 - Local path exposure can produce warning findings.
@@ -237,19 +221,22 @@ Milestone 9 remains a frontend privacy checkpoint. Existing backend commands rem
 - Redacted preview does not mutate the original Stage Payload.
 - Scanner limitations are clearly stated.
 - Redaction is local preview only.
-- Future AI submission remains blocked until Safety Gate exists.
-- No AI integration is added.
+- Safety Gate status is integrated into Staging Ground.
+- AI review remains unavailable.
+- No data is sent anywhere.
 - No OpenAI API integration is added.
 - No Stage Report is added.
 - No submit behavior is added.
 - No backend logic is added.
+- No full-repo scanning is added.
+- No persistence is added.
 - No dependencies are added.
 
 ## Notes
 
 Milestone 9 is a privacy checkpoint, not a full security scanner. Its purpose is to make obvious payload risk visible before Staged adds any AI review path.
 
-The MVP Safety Gate is intentionally not a full-repo scanner. Full-repo or changed-file local scanning is a later Safety Gate expansion, not an AI feature.
+The MVP Safety Gate is intentionally not a full-repo scanner. Bounded changed-file scanning and optional full-repo local scanning are later Safety Gate expansions, not AI features.
 
 RAG and retrieval are later context-selection features for AI review and should not be confused with secret scanning. Whole repositories should not be sent to an LLM by default.
 

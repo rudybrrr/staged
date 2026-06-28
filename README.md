@@ -12,9 +12,9 @@ Local-first verification before commit.
 
 ## Current milestone
 
-Milestone 8: Staging Ground.
+Milestone 9: Safety Gate and Redaction Preview.
 
-Milestones 1, 2, 3, 4, 5, 6, 7, and 8 are implemented. Staged can select a local Git repository, validate repository state, show repo metadata, list changed files, display read-only unified diffs for selected changed files, run allowlisted verification commands, show deterministic pre-stage screening findings without AI, build a read-only local Stage Payload preview from existing app state, show a local approximate Token Budget estimate for the current Stage Payload, and present a local read-only Staging Ground before any future AI submission.
+Milestones 1, 2, 3, 4, 5, 6, 7, 8, and 9 are implemented. Staged can select a local Git repository, validate repository state, show repo metadata, list changed files, display read-only unified diffs for selected changed files, run allowlisted verification commands, show deterministic pre-stage screening findings without AI, build a read-only local Stage Payload preview from existing app state, show a local approximate Token Budget estimate for the current Stage Payload, present a local read-only Staging Ground before any future AI submission, and run a local MVP Safety Gate with redacted preview.
 
 ## Current implementation status
 
@@ -101,7 +101,7 @@ Implemented:
 - Pre-Stage Screening findings included.
 - Payload completeness metadata included to make missing evidence visible.
 - Payload limitations list included.
-- Clear local-preview warning: `Local preview only. No AI call has been made. Secret redaction is not implemented yet.`
+- Clear local-preview warning that the Stage Payload is local, no AI call has been made, and redaction preview is handled separately by Safety Gate.
 - Frontend `TokenBudget` type.
 - Frontend `buildTokenBudget` utility.
 - Read-only Token Budget panel.
@@ -126,7 +126,21 @@ Implemented:
 - Clear no-AI-call wording.
 - Disabled/non-functional AI review action area.
 - Explicit blocked state because AI review is not implemented.
-- Explicit blocked state because secret redaction and Safety Gate enforcement are not implemented.
+- Safety Gate status integrated into Staging Ground readiness.
+- Frontend `SafetyGateResult` type.
+- Frontend `buildSafetyGateResult` utility.
+- Frontend Safety Gate panel.
+- Local pattern scanner over the serialized Stage Payload JSON.
+- Direct scanner over the currently loaded selected-file diff.
+- Detection for likely secret assignments such as `API_KEY=...`, `TOKEN=...`, `PASSWORD=...`, `SECRET=...`, `PRIVATE_KEY=...`, and `ACCESS_KEY=...`.
+- Detection for private key markers.
+- Detection for local machine path exposure.
+- Safety Gate statuses: `pass`, `warning`, and `blocked`.
+- Redacted payload preview.
+- Original Stage Payload remains unchanged by redaction preview.
+- Scan coverage summary.
+- Scanner limitations shown in the UI.
+- Clear local-only wording: no API call is made and no data is sent anywhere.
 - Staging Ground state clears when no valid repo or payload exists.
 
 Not implemented yet:
@@ -134,9 +148,10 @@ Not implemented yet:
 - Workspace or nested package command detection.
 - Risk classifier.
 - Stage Report.
-- Secret scanning.
-- Redaction.
-- Safety Gate enforcement.
+- Backend scanning.
+- Full-repo scanning.
+- Submit behavior.
+- Safety Gate enforcement for a real submission path.
 - SQLite.
 - Stage History.
 - AI features.
