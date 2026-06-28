@@ -1,4 +1,5 @@
 import type { StagePayload } from "./stagePayload";
+import type { SafetyGateResult } from "./safetyGate";
 import type { TokenBudget } from "./tokenBudget";
 
 export type StagingGroundReadiness = {
@@ -6,6 +7,8 @@ export type StagingGroundReadiness = {
   has_selected_file_diff: boolean;
   has_command_result: boolean;
   has_token_budget: boolean;
+  has_safety_gate: boolean;
+  safety_gate_status: "pass" | "warning" | "blocked" | null;
   has_blocking_limitations: boolean;
   redaction_ready: boolean;
   ai_review_available: boolean;
@@ -20,6 +23,7 @@ export type StagingGroundReadiness = {
 export function buildStagingGroundReadiness(
   payload: StagePayload | null,
   tokenBudget: TokenBudget | null,
+  safetyGateResult: SafetyGateResult | null,
 ): StagingGroundReadiness {
   const hasPayload = payload !== null;
   const hasSelectedFileDiff =
@@ -27,9 +31,14 @@ export function buildStagingGroundReadiness(
   const hasCommandResult =
     payload?.payload_completeness.command_result_included ?? false;
   const hasTokenBudget = tokenBudget !== null;
-  const redactionReady = false;
+  const hasSafetyGate = safetyGateResult !== null;
+  const safetyGateStatus = safetyGateResult?.status ?? null;
+  const safetyGateBlocked = safetyGateStatus === "blocked";
+  const redactionReady =
+    safetyGateStatus === "pass" || safetyGateStatus === "warning";
   const aiReviewAvailable = false;
-  const hasBlockingLimitations = !redactionReady || !aiReviewAvailable;
+  const hasBlockingLimitations =
+    !redactionReady || safetyGateBlocked || !aiReviewAvailable;
   const messages: StagingGroundReadiness["messages"] = [
     {
       id: "local-preview-only",
@@ -81,10 +90,41 @@ export function buildStagingGroundReadiness(
     });
   }
 
+  if (hasSafetyGate) {
+    messages.push({
+      id: "safety-gate-exists",
+      level: "info",
+      message: `Safety Gate exists with ${safetyGateStatus} status.`,
+    });
+  } else {
+    messages.push({
+      id: "safety-gate-missing",
+      level: "blocked",
+      message: "Safety Gate is missing.",
+    });
+  }
+
+  if (safetyGateBlocked) {
+    messages.push({
+      id: "safety-gate-blocked",
+      level: "blocked",
+      message: "Safety Gate found likely sensitive data in the Stage Payload.",
+    });
+  }
+
+  if (safetyGateStatus === "warning") {
+    messages.push({
+      id: "safety-gate-warning",
+      level: "warning",
+      message: "Safety Gate found warnings in the Stage Payload.",
+    });
+  }
+
   messages.push({
-    id: "secret-redaction-not-implemented",
-    level: "blocked",
-    message: "Secret redaction is not implemented yet.",
+    id: "safety-gate-scanner-limitations",
+    level: "info",
+    message:
+      "Safety Gate is an MVP pattern scanner only; it can miss secrets and produce false positives.",
   });
 
   messages.push({
@@ -112,6 +152,8 @@ export function buildStagingGroundReadiness(
     has_selected_file_diff: hasSelectedFileDiff,
     has_command_result: hasCommandResult,
     has_token_budget: hasTokenBudget,
+    has_safety_gate: hasSafetyGate,
+    safety_gate_status: safetyGateStatus,
     has_blocking_limitations: hasBlockingLimitations,
     redaction_ready: redactionReady,
     ai_review_available: aiReviewAvailable,
