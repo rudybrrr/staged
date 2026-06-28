@@ -249,4 +249,8 @@ Milestone 9 remains a frontend privacy checkpoint. Existing backend commands rem
 
 Milestone 9 is a privacy checkpoint, not a full security scanner. Its purpose is to make obvious payload risk visible before Staged adds any AI review path.
 
+The MVP Safety Gate is intentionally not a full-repo scanner. Full-repo or changed-file local scanning is a later Safety Gate expansion, not an AI feature.
+
+RAG and retrieval are later context-selection features for AI review and should not be confused with secret scanning. Whole repositories should not be sent to an LLM by default.
+
 The MVP scanner will miss some sensitive data and may flag harmless strings. That tradeoff is acceptable for this milestone because the goal is to establish a local Safety Gate and redaction preview boundary before adding stronger scanning, backend enforcement, user approval, or payload submission.
