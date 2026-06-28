@@ -108,7 +108,7 @@ export function buildStagingGroundReadiness(
     messages.push({
       id: "safety-gate-blocked",
       level: "blocked",
-      message: "Safety Gate found likely sensitive data in the Stage Payload.",
+      message: "Safety Gate found likely sensitive data in the Stage Payload or selected file diff.",
     });
   }
 

@@ -35,6 +35,8 @@ const SECRET_FIELD_PATTERN =
   /("(?:[^"\\]|\\.)*(?:api_key|apikey|token|secret|password|passwd|private_key|access_key)(?:[^"\\]|\\.)*"\s*:\s*)("(?:(?:\\.)|[^"\\])*"|[^\s,}\]]+)/gi;
 const ASSIGNMENT_PATTERN =
   /(^|[\s+\-"]|\\r\\n|\\n)(API_KEY|TOKEN|PASSWORD|SECRET|PRIVATE_KEY|ACCESS_KEY)\s*=\s*([^\\\s"',;}]+)(?=\\r\\n|\\n|\r?\n|"|\s|$|[,;}])/gim;
+const SELECTED_DIFF_ASSIGNMENT_PATTERN =
+  /(?:^|\r?\n)[+\-\s]*(API_KEY|TOKEN|PASSWORD|SECRET|PRIVATE_KEY|ACCESS_KEY)\s*=\s*([^\s"',;}]+)/gim;
 const PRIVATE_KEY_PATTERN =
   /-----BEGIN (?:RSA |OPENSSH )?PRIVATE KEY-----/g;
 const LOCAL_PATH_PATTERN = /C:(?:\/Users\/|\\\\Users\\\\)/g;
@@ -54,13 +56,21 @@ export function buildSafetyGateResult(payload: StagePayload): SafetyGateResult {
   const privateKeyMatches = countMatches(serializedPayload, PRIVATE_KEY_PATTERN);
   const localPathMatches = countMatches(serializedPayload, LOCAL_PATH_PATTERN);
   const selectedFileDiffAssignmentMatches = selectedFileDiffScanned
-    ? countMatches(selectedFileDiff, ASSIGNMENT_PATTERN)
+    ? countMatches(selectedFileDiff, SELECTED_DIFF_ASSIGNMENT_PATTERN)
     : 0;
   const selectedFileDiffPrivateKeyMatches = selectedFileDiffScanned
     ? countMatches(selectedFileDiff, PRIVATE_KEY_PATTERN)
     : 0;
   const selectedFileDiffSecretMatches =
     selectedFileDiffAssignmentMatches + selectedFileDiffPrivateKeyMatches;
+  const serializedPayloadOnlyAssignmentMatches = Math.max(
+    assignmentMatches - selectedFileDiffAssignmentMatches,
+    0,
+  );
+  const serializedPayloadOnlyPrivateKeyMatches = Math.max(
+    privateKeyMatches - selectedFileDiffPrivateKeyMatches,
+    0,
+  );
 
   redactedPayloadPreview = redactedPayloadPreview.replace(
     SECRET_FIELD_PATTERN,
@@ -98,14 +108,14 @@ export function buildSafetyGateResult(payload: StagePayload): SafetyGateResult {
     });
   }
 
-  if (assignmentMatches > 0) {
+  if (serializedPayloadOnlyAssignmentMatches > 0) {
     findings.push({
       id: "likely-secret-assignments",
       level: "blocked",
       category: "secret",
       title: "Likely secret assignment detected",
       detail: "Detected likely secret assignment in the serialized Stage Payload JSON.",
-      match_count: assignmentMatches,
+      match_count: serializedPayloadOnlyAssignmentMatches,
     });
   }
 
@@ -121,14 +131,14 @@ export function buildSafetyGateResult(payload: StagePayload): SafetyGateResult {
     });
   }
 
-  if (privateKeyMatches > 0) {
+  if (serializedPayloadOnlyPrivateKeyMatches > 0) {
     findings.push({
       id: "private-key-marker",
       level: "blocked",
       category: "secret",
       title: "Private key marker detected",
       detail: "The serialized Stage Payload contains a private key header.",
-      match_count: privateKeyMatches,
+      match_count: serializedPayloadOnlyPrivateKeyMatches,
     });
   }
 

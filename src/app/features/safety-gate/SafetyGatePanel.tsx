@@ -94,6 +94,10 @@ export function SafetyGatePanel({ result }: SafetyGatePanelProps) {
             <h3 className="text-sm font-medium text-zinc-200">
               Scan coverage
             </h3>
+            <p className="mt-2 text-sm leading-6 text-zinc-500">
+              Redactions are counted from the serialized Stage Payload preview;
+              selected file diff findings are counted from the direct diff scan.
+            </p>
             <dl className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <dt className="text-sm text-zinc-500">
