@@ -9,6 +9,7 @@ import { DiffViewerPanel } from "./features/diff-viewer/DiffViewerPanel";
 import { PreStageScreeningPanel } from "./features/pre-stage-screening/PreStageScreeningPanel";
 import { RepoPicker } from "./features/repo-picker/RepoPicker";
 import { SafetyGatePanel } from "./features/safety-gate/SafetyGatePanel";
+import { StageReportPanel } from "./features/stage-report/StageReportPanel";
 import { StagePayloadPreviewPanel } from "./features/stage-payload/StagePayloadPreviewPanel";
 import { StagingGroundPanel } from "./features/staging-ground/StagingGroundPanel";
 import { TokenBudgetPanel } from "./features/token-budget/TokenBudgetPanel";
@@ -21,6 +22,7 @@ import {
 } from "./lib/repo";
 import { buildPreStageFindings } from "./lib/screening";
 import { buildSafetyGateResult } from "./lib/safetyGate";
+import { buildLocalStageReportPreview } from "./lib/stageReport";
 import { buildStagePayload } from "./lib/stagePayload";
 import { buildStagingGroundReadiness } from "./lib/stagingGround";
 import { buildTokenBudget } from "./lib/tokenBudget";
@@ -147,6 +149,16 @@ export default function App() {
     () =>
       buildStagingGroundReadiness(stagePayload, tokenBudget, safetyGateResult),
     [stagePayload, safetyGateResult, tokenBudget],
+  );
+  const stageReport = useMemo(
+    () =>
+      buildLocalStageReportPreview({
+        stagePayload,
+        tokenBudget,
+        safetyGateResult,
+        stagingGroundReadiness,
+      }),
+    [safetyGateResult, stagePayload, stagingGroundReadiness, tokenBudget],
   );
 
   function clearSelectedDiff() {
@@ -379,6 +391,8 @@ export default function App() {
           hasValidRepo={repoSummary?.is_git_repo ?? false}
           readiness={stagingGroundReadiness}
         />
+
+        <StageReportPanel report={stageReport} />
 
         {repoSummary && (
           <>
