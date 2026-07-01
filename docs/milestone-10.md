@@ -1,14 +1,14 @@
 # Milestone 10: Structured Stage Report
 
-Status: Planned.
+Status: Phase 10A implemented. Phase 10B not implemented.
 
 ## Goal
 
-Define and preview a structured Stage Report generated from the approved local evidence bundle, while keeping deterministic evidence separate from AI judgment.
+Define and preview a structured Stage Report generated from the approved local evidence bundle, while keeping deterministic evidence separate from future AI judgment.
 
-Milestone 10 starts with a schema-first implementation. Phase 10A validates the report shape, local preview builder, and read-only UI before any real LLM call exists. Phase 10B can add structured AI generation later, after the schema, Staging Ground, Safety Gate, and payload readiness rules are stable.
+Milestone 10 is split into two phases. Phase 10A is implemented and validates the report shape, local preview builder, and read-only UI without any LLM call. Phase 10B remains future work and can add structured AI generation only after the schema, Staging Ground, Safety Gate, and payload readiness rules are stable.
 
-This milestone is intentionally narrow. Phase 10A does not add OpenAI API integration, provider selection, prompt construction, API key storage, streaming, retry logic, persistence, Stage History, or any backend logic.
+The current Stage Report is local only, read-only, generated from deterministic local evidence, not AI-generated, and not a claim that the code is safe to commit.
 
 ## Product Context
 
@@ -16,31 +16,33 @@ Staged is a local-first verification workbench for auditing code changes before 
 
 Milestones 0 through 9 are complete and cover project setup, local repository inspection, changed files, read-only diffs, allowlisted command execution, deterministic Pre-Stage Screening, Stage Payload preview, Token Budget estimates, Staging Ground readiness, and a local Safety Gate with redaction preview.
 
-Milestone 10 adds the first structured report surface. It should summarize existing local evidence without implying that an AI review has happened.
+Milestone 10A adds the first structured report surface. It summarizes existing local evidence without implying that an AI review has happened. Deterministic evidence and future AI judgment remain separate.
 
-## Phase 10A Scope
+## Phase 10A Implemented Scope
 
 Frontend:
 
 - Frontend `StageReport` type.
 - Frontend `buildLocalStageReportPreview` utility.
-- Read-only `StageReportPanel`.
-- Local report preview generated from existing app state only.
-- Clear labeling that the report is a local preview or mock and is not AI-generated yet.
-- Clear separation between deterministic evidence, heuristic placeholder content, and future AI judgment.
+- Read-only Stage Report panel.
+- Local report preview generated from existing frontend state only.
+- Clear labeling that the report is a local preview and is not AI-generated.
+- Clear separation between deterministic evidence and future AI judgment.
 
 Report sections:
 
 - Report metadata.
-- Change summary.
+- Repo and change summary.
 - Deterministic evidence summary.
-- Safety Gate summary.
-- Token Budget summary.
-- Command result summary.
-- Risk findings placeholder.
-- Missing evidence.
-- Recommended human review checklist.
-- Recommendation placeholder.
+- Pre-Stage Screening findings.
+- Command result summary when available.
+- Safety Gate status.
+- Token Budget estimate.
+- Payload limitations.
+- Deterministic local-preview risk findings.
+- Missing evidence list.
+- Human review checklist.
+- Conservative recommendation logic.
 
 Inputs:
 
@@ -51,17 +53,31 @@ Inputs:
 - Staging Ground readiness.
 - Command result from the payload.
 
-## Out of Scope for Phase 10A
+Implemented behavior:
 
-The following are not part of Phase 10A:
+- Uses existing local frontend state only.
+- Does not mutate the Stage Payload.
+- Does not construct prompts.
+- Does not call APIs.
+- Does not call an LLM.
+- Does not add provider or model selection.
+- Does not add backend logic.
+- Does not add persistence or Stage History.
+- Treats Safety Gate `blocked` status as `do_not_submit`.
 
-- OpenAI API integration.
-- Any LLM call.
-- Provider or model selection.
+## Phase 10B Not Implemented
+
+The following remain out of scope and are not implemented:
+
+- Real LLM Stage Report generation.
+- OpenAI or other API integration.
+- Provider selection.
+- Model selection.
 - Prompt construction.
 - API key storage.
-- Streaming.
-- Retry logic.
+- Structured output validation from model responses.
+- Streaming behavior.
+- Retry behavior.
 - Report persistence.
 - SQLite.
 - Stage History.
@@ -74,7 +90,7 @@ The following are not part of Phase 10A:
 
 ## Technical Summary
 
-Phase 10A remains frontend-only and uses existing local state. It adds no backend logic, persistence, network calls, API calls, submit behavior, or AI behavior.
+Phase 10A is frontend-only and uses existing local state. It adds no backend logic, persistence, network calls, API calls, submit behavior, or AI behavior.
 
 Conceptual report shape:
 
@@ -115,17 +131,14 @@ type StageReport = {
 
 Builder behavior:
 
-- Accept the current Stage Payload, Pre-Stage Screening findings, Token Budget, Safety Gate result, Staging Ground readiness, and command result.
-- Populate report metadata and change summary from the payload.
-- Summarize deterministic evidence without reclassifying it as AI judgment.
-- Surface Safety Gate status and Token Budget estimate.
-- Convert payload limitations into missing evidence.
-- Add placeholder risk findings with `source: "local_preview"` or reserve future AI findings with `source: "future_ai"`.
-- Use conservative recommendations when Safety Gate is blocked or required evidence is missing.
-- Do not mutate the Stage Payload.
-- Do not construct prompts.
-- Do not call APIs.
-- Do not submit anything.
+- Accepts the current Stage Payload, Pre-Stage Screening findings, Token Budget, Safety Gate result, Staging Ground readiness, and command result.
+- Populates report metadata and change summary from the payload.
+- Summarizes deterministic evidence without reclassifying it as AI judgment.
+- Surfaces Safety Gate status and Token Budget estimate.
+- Converts payload limitations into missing evidence.
+- Adds local-preview risk findings with `source: "local_preview"`.
+- Uses conservative recommendations when Safety Gate is blocked or required evidence is missing.
+- Does not submit anything.
 
 ## UI Behavior
 
@@ -136,19 +149,19 @@ The panel shows:
 - Local preview notice.
 - Not-AI-generated notice.
 - Report metadata.
-- Change summary.
+- Repo and change summary.
 - Deterministic evidence summary.
 - Safety Gate status.
 - Token Budget estimate.
 - Command result summary.
 - Missing evidence.
 - Human review checklist.
-- Conservative recommendation placeholder.
+- Conservative recommendation.
 - Clear label for future AI judgment that is not available yet.
 
 The panel remains read-only. It does not add report editing, provider selection, model selection, prompt controls, submit behavior, persistence controls, or Stage History.
 
-Stale Stage Report state should clear when no valid repository or no valid payload exists, including when selecting a non-Git folder or switching away from a valid repository.
+Stale Stage Report state clears when no valid repository or no valid payload exists, including when selecting a non-Git folder or switching away from a valid repository.
 
 ## Architecture
 
@@ -159,31 +172,33 @@ buildLocalStageReportPreview
   ->
 StageReport
   ->
-StageReportPanel
+Stage Report panel
   ->
 Read-only local report preview
 ```
 
-Milestone 10 Phase 10A remains a frontend reporting layer. Existing backend commands remain focused on repository inspection, changed files, diffs, and command execution.
+Milestone 10A remains a frontend reporting layer. Existing backend commands remain focused on repository inspection, changed files, diffs, and command execution.
 
 ## Manual Test Plan
 
 ### Valid repository
 
 1. Select a valid Git repository.
-2. Confirm Stage Report preview appears when a Stage Payload exists.
+2. Confirm the local Stage Report preview appears when a Stage Payload exists.
 3. Confirm it clearly says local preview only and not AI-generated.
 4. Confirm repo metadata and changed-file count appear.
 
 ### Command result
 
 1. Run an available command.
-2. Confirm the command result summary appears in the Stage Report preview.
+2. Confirm the command result summary updates in the Stage Report preview.
 
 ### Safety Gate
 
-1. Confirm Safety Gate status appears.
-2. Confirm Safety Gate blocked status leads to a conservative recommendation.
+1. Add or select a changed file containing a fake API key such as `API_KEY=fake_test_key_123`.
+2. Confirm Safety Gate status becomes blocked.
+3. Confirm the Stage Report recommendation becomes `do_not_submit`.
+4. Confirm the report does not claim the code is safe to commit.
 
 ### Token Budget
 
@@ -203,7 +218,7 @@ Milestone 10 Phase 10A remains a frontend reporting layer. Existing backend comm
 ### Feature boundary
 
 1. Confirm no API call has been added.
-2. Confirm no LLM call has been added.
+2. Confirm no LLM call or AI review exists.
 3. Confirm no provider or model selection has been added.
 4. Confirm no prompt construction has been added.
 5. Confirm no API key storage has been added.
@@ -219,6 +234,7 @@ Milestone 10 Phase 10A remains a frontend reporting layer. Existing backend comm
 - Report clearly labels deterministic evidence separately from future AI judgment.
 - Report clearly says it is a local preview and not AI-generated.
 - Safety Gate status is included.
+- Safety Gate blocked status leads to `do_not_submit`.
 - Token Budget estimate is included.
 - Command result summary is included when available.
 - Missing evidence is visible.
@@ -248,13 +264,16 @@ Structured output should be validated before rendering as a Stage Report.
 Phase 10B may add:
 
 - Structured LLM-generated Stage Report.
+- OpenAI or other provider API integration.
 - Provider and model configuration.
 - Prompt construction.
-- Validated structured output.
+- Validated structured output from model responses.
+- Retry or streaming behavior.
+- Stage History persistence.
 - Clear distinction between deterministic evidence and AI judgment.
 
 ## Notes
 
-Milestone 10 is not the point where Staged becomes a GPT wrapper. The local Stage Report preview should make the evidence contract clearer before any AI integration exists.
+Milestone 10A does not make Staged a GPT wrapper. The local Stage Report preview makes the evidence contract clearer before any AI integration exists.
 
-The report should summarize what Staged already knows locally, identify what evidence is missing, and preserve a conservative human review path until structured AI generation is deliberately added later.
+The report summarizes what Staged already knows locally, identifies what evidence is missing, and preserves a conservative human review path until structured AI generation is deliberately added later.

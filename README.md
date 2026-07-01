@@ -12,9 +12,9 @@ Local-first verification before commit.
 
 ## Current milestone
 
-Milestone 9: Safety Gate and Redaction Preview.
+Milestone 10A: Local Stage Report Preview.
 
-Milestones 1, 2, 3, 4, 5, 6, 7, 8, and 9 are implemented. Staged can select a local Git repository, validate repository state, show repo metadata, list changed files, display read-only unified diffs for selected changed files, run allowlisted verification commands, show deterministic pre-stage screening findings without AI, build a read-only local Stage Payload preview from existing app state, show a local approximate Token Budget estimate for the current Stage Payload, present a local read-only Staging Ground before any future AI submission, and run a local MVP Safety Gate with redacted preview.
+Milestones 1, 2, 3, 4, 5, 6, 7, 8, 9, and 10A are implemented. Staged can select a local Git repository, validate repository state, show repo metadata, list changed files, display read-only unified diffs for selected changed files, run allowlisted verification commands, show deterministic pre-stage screening findings without AI, build a read-only local Stage Payload preview from existing app state, show a local approximate Token Budget estimate for the current Stage Payload, present a local read-only Staging Ground before any future AI submission, run a local MVP Safety Gate with redacted preview, and show a local read-only Stage Report preview generated from deterministic local evidence.
 
 ## Current implementation status
 
@@ -142,18 +142,50 @@ Implemented:
 - Scanner limitations shown in the UI.
 - Clear local-only wording: no API call is made and no data is sent anywhere.
 - Staging Ground state clears when no valid repo or payload exists.
+- Frontend `StageReport` type.
+- Frontend `buildLocalStageReportPreview` utility.
+- Frontend Stage Report panel.
+- Local read-only Stage Report preview.
+- Report generated from existing local frontend state only.
+- Report metadata.
+- Repo and change summary.
+- Deterministic evidence summary.
+- Pre-Stage Screening findings included.
+- Command result summary included when available.
+- Safety Gate status included.
+- Token Budget estimate included.
+- Payload limitations included.
+- Deterministic local-preview risk findings.
+- Missing evidence list.
+- Human review checklist.
+- Conservative recommendation logic.
+- Safety Gate blocked status leads to `do_not_submit`.
+- Clear local-preview wording.
+- Clear no-AI-review wording.
+- No API calls.
+- No LLM calls.
+- No provider or model selection.
+- No prompt construction.
+- No backend logic.
+- No persistence.
+- No Stage History.
 
 Not implemented yet:
 
 - Workspace or nested package command detection.
 - Risk classifier.
-- Stage Report.
 - Backend scanning.
 - Full-repo scanning.
 - Submit behavior.
 - Safety Gate enforcement for a real submission path.
 - SQLite.
 - Stage History.
+- Milestone 10B real LLM Stage Report generation.
+- OpenAI/API integration.
+- Provider or model selection.
+- Prompt construction.
+- Structured output validation from model responses.
+- Retry or streaming behavior.
 - AI features.
 - RAG.
 - Tree-sitter.
