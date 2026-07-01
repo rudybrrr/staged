@@ -1123,6 +1123,14 @@ Without retrieval, the app either:
 
 RAG lets Staged retrieve only the code and documentation most relevant to the diff.
 
+The canonical RAG architecture is defined in `docs/rag-architecture.md`. In Staged, real RAG means local retrieval items with source metadata, line ranges, retrieval reasons, scores, citations, token budgeting, Safety Gate inspection, and evaluation. It does not mean manually attaching extra files to a prompt, sending whole repositories to an LLM, or treating Safety Gate scanning as retrieval.
+
+The intended post-MVP path is:
+
+1. Level 1: lexical retrieval with `ripgrep`.
+2. Level 2: symbol-aware retrieval with Tree-sitter.
+3. Level 3: hybrid vector retrieval after lexical and symbol retrieval work.
+
 ## 12.2 Retrieval Strategy
 
 ### Stage 1: Diff-Only Context
@@ -1136,7 +1144,7 @@ Use only:
 
 This is the MVP.
 
-### Stage 2: Search-Based Retrieval
+### Stage 2 / Level 1: Search-Based Retrieval
 
 Use ripgrep or equivalent to find:
 
@@ -1158,7 +1166,7 @@ Cons:
 
 - Keyword search misses semantic relationships.
 
-### Stage 3: Tree-sitter Symbol Retrieval
+### Stage 3 / Level 2: Tree-sitter Symbol Retrieval
 
 Parse changed files to identify:
 
@@ -1177,9 +1185,9 @@ Changed hunk is inside validateSession()
 → Find tests mentioning validateSession
 ```
 
-### Stage 4: Vector Retrieval
+### Stage 4 / Level 3: Hybrid Vector Retrieval
 
-Chunk repo content and embed chunks.
+Add vector retrieval only after search-based and symbol-aware retrieval are working. Chunk repo content and embed chunks.
 
 Chunking rules:
 
@@ -1192,12 +1200,17 @@ Retrieval score should combine:
 
 ```text
 semantic similarity
++ exact lexical match strength
 + changed file proximity
 + import/export relationship
 + test file proximity
 + risk category relevance
 + recent modification status
++ Safety Gate status
++ token budget pressure
 ```
+
+The scoring model can evolve, but retrieved snippets must remain explainable and citeable.
 
 ### Stage 5: Impact Graph Retrieval
 
@@ -1728,7 +1741,7 @@ Deliverables:
 - Cached scan reuse.
 - Token Budget dashboard.
 
-## Phase 6: Search-Based RAG
+## Phase 6: Search-Based RAG / Level 1 Retrieval
 
 Goals:
 
@@ -1742,7 +1755,7 @@ Deliverables:
 - RAG context panel.
 - Comparison of diff-only versus retrieved-context review.
 
-## Phase 7: Tree-sitter and Better Context
+## Phase 7: Tree-sitter and Better Context / Level 2 Retrieval
 
 Goals:
 
@@ -1922,6 +1935,7 @@ Mitigation:
 - Show retrieved context to user.
 - Score context by path, symbol, and tests.
 - Compare diff-only versus RAG review in Stage Trials.
+- Track whether retrieval found the correct files, cited the right evidence, reduced token usage, and avoided false positives from irrelevant context.
 
 ---
 
