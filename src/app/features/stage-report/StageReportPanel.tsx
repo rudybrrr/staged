@@ -1,4 +1,7 @@
+import { useMemo, useState } from "react";
+
 import type { StageReport } from "../../lib/stageReport";
+import { formatStageReportMarkdown } from "../../lib/stageReportMarkdown";
 
 type StageReportPanelProps = {
   report: StageReport | null;
@@ -35,6 +38,28 @@ function commandStatus(report: StageReport) {
 }
 
 export function StageReportPanel({ report }: StageReportPanelProps) {
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">(
+    "idle",
+  );
+  const markdown = useMemo(
+    () => (report ? formatStageReportMarkdown(report) : ""),
+    [report],
+  );
+
+  async function copyMarkdown() {
+    if (!report || !navigator.clipboard) {
+      setCopyStatus("error");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(markdown);
+      setCopyStatus("copied");
+    } catch {
+      setCopyStatus("error");
+    }
+  }
+
   return (
     <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -46,9 +71,30 @@ export function StageReportPanel({ report }: StageReportPanelProps) {
         </div>
 
         {report && (
-          <span className="w-fit rounded-full border border-zinc-700 bg-zinc-950 px-3 py-1 text-xs font-medium text-zinc-300">
-            Preview only
-          </span>
+          <div className="flex flex-col items-start gap-2 sm:items-end">
+            <span className="w-fit rounded-full border border-zinc-700 bg-zinc-950 px-3 py-1 text-xs font-medium text-zinc-300">
+              Preview only
+            </span>
+            <div className="flex items-center gap-3">
+              {copyStatus === "copied" && (
+                <span className="text-xs font-medium text-emerald-300">
+                  Copied
+                </span>
+              )}
+              {copyStatus === "error" && (
+                <span className="text-xs font-medium text-red-300">
+                  Copy failed
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={copyMarkdown}
+                className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm font-medium text-zinc-100 transition hover:border-zinc-500 hover:bg-zinc-900"
+              >
+                Copy Markdown
+              </button>
+            </div>
+          </div>
         )}
       </div>
 
@@ -281,6 +327,19 @@ export function StageReportPanel({ report }: StageReportPanelProps) {
               <span className="text-zinc-500"> / </span>
               {report.recommendation.rationale}
             </p>
+          </section>
+
+          <section>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="text-sm font-medium text-zinc-200">
+                Read-only Markdown export
+              </h3>
+              <p className="text-xs text-zinc-500">
+                Local preview only. Copy stays in this app session.
+              </p>
+            </div>
+
+            <pre className="mt-3 max-h-[24rem] overflow-auto whitespace-pre-wrap rounded-lg border border-zinc-800 bg-zinc-950 p-4 font-mono text-sm leading-6 text-zinc-200">{markdown}</pre>
           </section>
 
           <section>
