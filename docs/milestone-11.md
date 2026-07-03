@@ -1,12 +1,12 @@
 # Milestone 11: Markdown Export
 
-Status: Planned.
+Status: Implemented.
 
 ## Goal
 
 Allow the user to export the current local Stage Report as a readable Markdown audit note, without adding AI, persistence, or cloud behavior.
 
-Milestone 11 makes Staged useful before real AI integration. A developer should be able to generate a deterministic local verification report, copy it as Markdown, and keep it with their own commit notes or review workflow.
+Milestone 11 makes Staged useful before real AI integration. A developer can generate a deterministic local verification report, copy it as Markdown, and keep it with their own commit notes or review workflow.
 
 The export is local only. It is not AI-generated, not persisted by Staged, not synced, and not submitted anywhere.
 
@@ -20,32 +20,34 @@ Milestone 10B, real LLM Stage Report generation, is not implemented yet. RAG is 
 
 Milestone 11 exports the existing local Stage Report. It does not create a new evidence source and does not change the AI boundary.
 
-## Planned Scope
+## Implemented Scope
 
 Frontend:
 
-- Frontend Markdown formatter conceptually named `formatStageReportMarkdown`.
-- Export controls in the Stage Report panel or a small adjacent export panel.
-- Copy-to-clipboard support using browser clipboard APIs when available.
+- Frontend `formatStageReportMarkdown(report)` utility.
+- Markdown export generated from the current local `StageReport`.
+- Copy Markdown control in the Stage Report panel.
+- Copy-to-clipboard support using browser clipboard APIs.
+- Simple copied/error state.
+- Read-only Markdown preview.
 - Clear local-preview and not-AI-generated wording in the exported Markdown.
 - Local-only behavior.
 
 Markdown content:
 
 - Report metadata.
-- Repository summary.
+- Repository/change summary.
 - Deterministic evidence summary.
 - Safety Gate status.
-- Token Budget summary.
+- Token Budget estimate.
+- Command result summary when available.
+- Screening findings.
+- Payload limitations.
 - Risk findings.
 - Missing evidence.
 - Human review checklist.
 - Recommendation.
 - Clear statement that the report is a local preview and is not AI-generated.
-
-Optional:
-
-- Save-to-file only if it can be done without new dependencies, backend work, persistence, or Tauri capability changes.
 
 ## Out of Scope
 
@@ -59,9 +61,11 @@ The following are not part of Milestone 11:
 - API key storage.
 - Stage History persistence.
 - SQLite.
+- Saved scan records.
 - Cloud sync.
 - Collaboration.
 - GitHub PR comments.
+- GitHub PR comment export.
 - Auto-fixing.
 - PDF export.
 - DOCX export.
@@ -75,7 +79,7 @@ The following are not part of Milestone 11:
 
 ## Technical Summary
 
-Milestone 11 should use the existing `StageReport` object and format it into Markdown on the frontend.
+Milestone 11 uses the existing `StageReport` object and formats it into Markdown on the frontend.
 
 Conceptual flow:
 
@@ -89,7 +93,7 @@ Markdown string
 Copy to clipboard
 ```
 
-The formatter should preserve the same evidence boundary as the Stage Report preview:
+The formatter preserves the same evidence boundary as the Stage Report preview:
 
 - Deterministic local evidence remains separate from future AI judgment.
 - Safety Gate `blocked` status remains visible and should preserve the `do_not_submit` recommendation.
@@ -97,17 +101,20 @@ The formatter should preserve the same evidence boundary as the Stage Report pre
 - The exported note must not claim that an AI review has happened.
 - The exported note must not claim that the code is safe to commit.
 
-Clipboard behavior should use browser clipboard APIs when available. The milestone should not add backend persistence, file storage, API calls, prompt construction, model configuration, or provider setup.
+Clipboard behavior uses browser clipboard APIs. The milestone does not add backend persistence, file storage, API calls, prompt construction, model configuration, or provider setup.
 
 ## UI Behavior
 
-The Stage Report export controls should appear only when a local Stage Report preview exists.
+The Stage Report export controls appear when a local Stage Report preview exists.
 
-The UI should allow the user to copy the Markdown version of the current report. It should make clear that:
+The UI allows the user to copy the Markdown version of the current report. It makes clear that:
 
 - The Markdown is generated locally.
+- The Markdown is generated from the current local Stage Report.
 - The Markdown is based on deterministic local evidence.
 - The Markdown is not AI-generated.
+- The Markdown is not persisted.
+- The Markdown is not cloud-synced.
 - Copying the Markdown does not send data anywhere.
 
 The export surface should not add report editing, Stage History, saved reports, provider selection, model selection, prompt controls, GitHub PR comments, PDF export, DOCX export, or cloud behavior.
@@ -153,14 +160,18 @@ The export surface should not add report editing, Stage History, saved reports, 
 - Export is local only.
 - Export uses the existing `StageReport` object.
 - Export includes report metadata.
-- Export includes repository summary.
+- Export includes repository/change summary.
 - Export includes deterministic evidence and recommendation.
 - Export includes Safety Gate status.
-- Export includes Token Budget summary.
+- Export includes Token Budget estimate.
+- Export includes command result summary when available.
+- Export includes screening findings.
+- Export includes payload limitations.
 - Export includes risk findings and missing evidence.
 - Export includes a human review checklist.
 - Export clearly states the report is a local preview.
 - Export clearly states the report is not AI-generated.
+- Export is not persisted or cloud-synced.
 - Safety Gate `blocked` status is reflected as `do_not_submit`.
 - No AI, LLM call, prompt construction, provider selection, model selection, API key storage, persistence, cloud behavior, GitHub PR comment export, RAG, retrieval, PDF export, DOCX export, dependency, or Tauri capability change is added.
 

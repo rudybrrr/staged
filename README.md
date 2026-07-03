@@ -12,9 +12,9 @@ Local-first verification before commit.
 
 ## Current milestone
 
-Milestone 10A: Local Stage Report Preview.
+Milestone 11: Markdown Export.
 
-Milestones 1, 2, 3, 4, 5, 6, 7, 8, 9, and 10A are implemented. Staged can select a local Git repository, validate repository state, show repo metadata, list changed files, display read-only unified diffs for selected changed files, run allowlisted verification commands, show deterministic pre-stage screening findings without AI, build a read-only local Stage Payload preview from existing app state, show a local approximate Token Budget estimate for the current Stage Payload, present a local read-only Staging Ground before any future AI submission, run a local MVP Safety Gate with redacted preview, and show a local read-only Stage Report preview generated from deterministic local evidence.
+Milestones 1, 2, 3, 4, 5, 6, 7, 8, 9, 10A, and 11 are implemented. Staged can select a local Git repository, validate repository state, show repo metadata, list changed files, display read-only unified diffs for selected changed files, run allowlisted verification commands, show deterministic pre-stage screening findings without AI, build a read-only local Stage Payload preview from existing app state, show a local approximate Token Budget estimate for the current Stage Payload, present a local read-only Staging Ground before any future AI submission, run a local MVP Safety Gate with redacted preview, show a local read-only Stage Report preview generated from deterministic local evidence, and copy that current local Stage Report as Markdown.
 
 ## Current implementation status
 
@@ -162,6 +162,14 @@ Implemented:
 - Safety Gate blocked status leads to `do_not_submit`.
 - Clear local-preview wording.
 - Clear no-AI-review wording.
+- Frontend `formatStageReportMarkdown(report)` utility.
+- Markdown export generated from the current local `StageReport`.
+- Copy Markdown control in the Stage Report panel.
+- Clipboard copy using browser clipboard APIs.
+- Simple copied/error state.
+- Read-only Markdown preview.
+- Exported Markdown includes local-preview and no-AI warning, report metadata, repository/change summary, deterministic evidence, Safety Gate status, Token Budget estimate, command result summary when available, screening findings, payload limitations, risk findings, missing evidence, human review checklist, and recommendation.
+- Markdown Export is local-only, not AI-generated, not persisted, and not cloud-synced.
 - No API calls.
 - No LLM calls.
 - No provider or model selection.
@@ -191,6 +199,9 @@ Not implemented yet:
 - Tree-sitter.
 - Vector search.
 - GitHub PR integration.
+- GitHub PR comment export.
+- PDF export.
+- DOCX export.
 - Auto-fixing.
 
 ## Development
