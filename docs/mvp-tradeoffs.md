@@ -60,17 +60,25 @@ The implemented MVP flow currently includes:
 
 ## UI and frontend design debt
 
-The current MVP UI is functional and panel-based. Styling is intentionally simple, and components prioritize implementation clarity over visual polish while the MVP validates the local verification workflow first.
+Milestone 12 (MVP UI Polish) is the dedicated pass for this debt. It is a focused MVP polish pass, not a full redesign: it restyles and reorders existing panels using Tailwind and a small set of internal UI primitives, and does not change backend behavior, data flow, or core logic. The design basis is `docs/ui-polish-spec.md`, which defines the target layout, visual system, component plan, icon plan, interaction states, and slice-by-slice conversion plan.
 
-Visual hierarchy, spacing, layout, and component consistency need a dedicated pass. Portfolio screenshots will need polish before final presentation.
+Milestone 12 covers:
 
-Later expansion path:
+- App shell, top status bar, and workflow-ordered two-column layout.
+- Standardized panel, section heading, status badge, button, empty state, and code/diff/JSON/Markdown preview styling.
+- Restrained `lucide-react` icon usage (the one new dependency, added during implementation, not during planning).
+- A visually unmistakable Safety Gate blocked state.
+- Screenshot/demo readiness for a portfolio README.
 
-- Add a post-MVP design polish milestone.
-- Standardize layout, cards, badges, buttons, empty states, and code/output panels.
-- Improve information hierarchy across Pre-Stage Screening, Stage Payload, Token Budget, Safety Gate, and Staging Ground.
-- Consider shadcn/ui adoption or a small internal component system.
-- Improve responsive and screenshot-ready states.
+Milestone 12 does not include a full redesign, branding overhaul, shadcn/ui adoption, animation libraries, or responsive/mobile layout. It targets a wide desktop workbench window only.
+
+Later expansion path (beyond Milestone 12):
+
+- Deeper design-system work and reusable component library growth.
+- shadcn/ui adoption, if a future milestone justifies the dependency weight.
+- Animation (for example Framer Motion) for state transitions.
+- Responsive/mobile layout.
+- Additional screenshots and portfolio/demo assets beyond the Milestone 12 baseline.
 
 ## Documentation maintenance rule
 
