@@ -1,6 +1,6 @@
 # UI Visual Redesign Plan
 
-Status: Planned. Implementation-ready.
+Status: Implemented. All five 12F slices (12F-1 through 12F-5) have shipped.
 
 This document turns the approved screenshot-based visual critique into a concrete,
 Sonnet-implementable plan. It is a **visual redesign only**: it restyles and rearranges
@@ -401,3 +401,24 @@ README-screenshot quality is met when, across empty / clean-repo / warning-gate 
   tables sit behind "Show more…".
 - **No regressions:** all existing functionality behaves exactly as before; only presentation
   changed. App builds and runs; no console errors introduced.
+
+---
+
+## 12. Implementation status
+
+All five slices are implemented and committed:
+
+- **12F-1** — visual foundation and status unification.
+- **12F-2** — evidence pipeline strip and layout rebalance.
+- **12F-3** — review rail verdict card and collapsed payload/token details.
+- **12F-4** — evidence workbench grouping (Source / Diff / Screening) and code/output readability.
+- **12F-5** — screenshot-readiness regression pass.
+
+This was a **visual-only** pass. No product behavior, backend behavior, AI/API integration, RAG
+implementation, Stage History, or persistence was added or changed; the acceptance criteria in
+§11 were verified against the existing data flow. The app is now more portfolio-demo and
+screenshot ready.
+
+Remaining UI work is intentionally out of scope for 12F and tracked as separate future paths in
+`docs/mvp-tradeoffs.md`: an accessibility pass, responsive/mobile refinements, README
+screenshots/GIFs, possible `shadcn/ui` adoption, and deeper design-system work.

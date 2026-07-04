@@ -12,9 +12,11 @@ Local-first verification before commit.
 
 ## Current milestone
 
-Milestone 11: Markdown Export.
+Milestone 12: MVP UI Polish, plus its 12F visual redesign follow-up.
 
-Milestones 1, 2, 3, 4, 5, 6, 7, 8, 9, 10A, and 11 are implemented. Staged can select a local Git repository, validate repository state, show repo metadata, list changed files, display read-only unified diffs for selected changed files, run allowlisted verification commands, show deterministic pre-stage screening findings without AI, build a read-only local Stage Payload preview from existing app state, show a local approximate Token Budget estimate for the current Stage Payload, present a local read-only Staging Ground before any future AI submission, run a local MVP Safety Gate with redacted preview, show a local read-only Stage Report preview generated from deterministic local evidence, and copy that current local Stage Report as Markdown.
+Milestones 1, 2, 3, 4, 5, 6, 7, 8, 9, 10A, 11, and 12 (including the 12F follow-up) are implemented. Staged can select a local Git repository, validate repository state, show repo metadata, list changed files, display read-only unified diffs for selected changed files, run allowlisted verification commands, show deterministic pre-stage screening findings without AI, build a read-only local Stage Payload preview from existing app state, show a local approximate Token Budget estimate for the current Stage Payload, present a local read-only Staging Ground before any future AI submission, run a local MVP Safety Gate with redacted preview, show a local read-only Stage Report preview generated from deterministic local evidence, and copy that current local Stage Report as Markdown.
+
+Milestone 12 and its 12F follow-up (`docs/ui-visual-redesign-plan.md`) are a visual-only polish and redesign pass: a visible evidence pipeline strip, a rebalanced two-column layout, a review rail verdict card with collapsed payload/token details, grouped evidence workbench panels, unified status badges, and more readable code/diff/output blocks. No product behavior, backend behavior, AI/API integration, RAG implementation, Stage History, or persistence was added — the app is now more portfolio-demo and screenshot ready.
 
 ## Current implementation status
 

@@ -1,6 +1,6 @@
 # Milestone 12: MVP UI Polish
 
-Status: Planned.
+Status: Implemented.
 
 ## Goal
 
@@ -119,3 +119,9 @@ Milestone 12 makes this existing flow visually explicit through layout order, se
 Milestone 12 is a focused MVP polish pass, not a full redesign. The design basis is `docs/ui-polish-spec.md`, which should be treated as authoritative for layout, component boundaries, icon usage, and interaction states during implementation.
 
 Deeper design-system work, shadcn/ui adoption, animation, and responsive/mobile layout remain later expansion paths and are tracked in `docs/mvp-tradeoffs.md`.
+
+### Follow-up: 12F visual redesign pass (complete)
+
+A follow-up visual-only redesign pass, `12F`, is planned in `docs/ui-visual-redesign-plan.md` and is now implemented (slices 12F-1 through 12F-5): visual foundation and status-badge unification, an evidence pipeline strip with a rebalanced layout, a review rail verdict card with collapsed payload/token details, evidence workbench grouping (Source / Diff / Screening) with improved code/output readability, and a screenshot-readiness regression pass.
+
+12F restyled and regrouped existing panels only. No product behavior, backend behavior, AI/API integration, RAG implementation, Stage History, or persistence was added. The app is now more portfolio-demo and screenshot ready. Accessibility, responsive/mobile refinements, README screenshots/GIFs, possible shadcn/ui adoption, and deeper design-system work remain separate future expansion paths, tracked in `docs/mvp-tradeoffs.md`.

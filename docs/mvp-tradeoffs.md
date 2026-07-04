@@ -72,13 +72,23 @@ Milestone 12 covers:
 
 Milestone 12 does not include a full redesign, branding overhaul, shadcn/ui adoption, animation libraries, or responsive/mobile layout. It targets a wide desktop workbench window only.
 
-Later expansion path (beyond Milestone 12):
+**Follow-up 12F visual redesign pass (complete).** A visual-only follow-up pass, `12F`
+(`docs/ui-visual-redesign-plan.md`), is implemented across five slices: visual foundation and
+status-badge unification, a visible evidence pipeline strip with a rebalanced layout, a review
+rail verdict card with collapsed payload/token details, evidence workbench grouping (Source /
+Diff / Screening) with improved code/output readability, and a screenshot-readiness regression
+pass. It restyled and regrouped existing panels only — no product behavior, backend behavior,
+AI/API integration, RAG implementation, Stage History, or persistence was added. The app is now
+more portfolio-demo and screenshot ready.
 
-- Deeper design-system work and reusable component library growth.
+Later expansion path (beyond Milestone 12 and 12F):
+
+- An accessibility pass.
+- Responsive/mobile layout refinements.
+- README screenshots/GIFs.
 - shadcn/ui adoption, if a future milestone justifies the dependency weight.
+- Deeper design-system work and reusable component library growth.
 - Animation (for example Framer Motion) for state transitions.
-- Responsive/mobile layout.
-- Additional screenshots and portfolio/demo assets beyond the Milestone 12 baseline.
 
 ## Documentation maintenance rule
 
