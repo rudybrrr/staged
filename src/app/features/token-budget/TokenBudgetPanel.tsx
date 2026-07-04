@@ -5,13 +5,14 @@ import { EmptyState, MetricPill, Panel, StatusBadge } from "../../ui";
 
 type TokenBudgetPanelProps = {
   budget: TokenBudget | null;
+  embedded?: boolean;
 };
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat("en-US").format(value);
 }
 
-export function TokenBudgetPanel({ budget }: TokenBudgetPanelProps) {
+export function TokenBudgetPanel({ budget, embedded = false }: TokenBudgetPanelProps) {
   const hasWarnings = budget
     ? budget.warnings.some((warning) => warning.level === "warning")
     : false;
@@ -28,6 +29,7 @@ export function TokenBudgetPanel({ budget }: TokenBudgetPanelProps) {
             : { tone: "preview", label: "Read-only estimate" }
           : undefined
       }
+      variant={embedded ? "inset" : "default"}
     >
       {!budget && (
         <EmptyState

@@ -19,6 +19,9 @@ export type { EmptyStateProps } from "./EmptyState";
 export { CodeBlock } from "./CodeBlock";
 export type { CodeBlockProps } from "./CodeBlock";
 
+export { Modal } from "./Modal";
+export type { ModalProps } from "./Modal";
+
 export { MetricPill, Metric } from "./MetricPill";
 export type { MetricPillProps, MetricProps } from "./MetricPill";
 

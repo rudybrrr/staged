@@ -6,6 +6,7 @@ import { ActionButton, EmptyState, Panel, StatusBadge, type StatusTone } from ".
 type StagingGroundPanelProps = {
   hasValidRepo: boolean;
   readiness: StagingGroundReadiness;
+  embedded?: boolean;
 };
 
 const statusLabels: Record<StagingGroundReadiness["status"], string> = {
@@ -60,6 +61,7 @@ function safetyGateChecklistState(
 export function StagingGroundPanel({
   hasValidRepo,
   readiness,
+  embedded = false,
 }: StagingGroundPanelProps) {
   const checklist: Array<{
     id: string;
@@ -109,6 +111,7 @@ export function StagingGroundPanel({
       icon={<ClipboardCheck className="h-5 w-5" />}
       description="Local review before future AI submission. No AI call has been made."
       status={{ tone: statusTones[readiness.status], label: statusLabels[readiness.status] }}
+      variant={embedded ? "inset" : "default"}
     >
       {!hasValidRepo && (
         <EmptyState

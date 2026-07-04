@@ -5,6 +5,7 @@ import { CodeBlock, EmptyState, MetricPill, Panel, StatusBadge } from "../../ui"
 
 type StagePayloadPreviewPanelProps = {
   payload: StagePayload | null;
+  embedded?: boolean;
 };
 
 function commandStatus(payload: StagePayload) {
@@ -21,6 +22,7 @@ function commandStatus(payload: StagePayload) {
 
 export function StagePayloadPreviewPanel({
   payload,
+  embedded = false,
 }: StagePayloadPreviewPanelProps) {
   return (
     <Panel
@@ -28,6 +30,7 @@ export function StagePayloadPreviewPanel({
       icon={<Package className="h-5 w-5" />}
       description="Local preview only. No AI call has been made. Secret redaction is not implemented yet."
       status={payload ? { tone: "preview", label: "Read-only JSON" } : undefined}
+      variant={embedded ? "inset" : "default"}
     >
       {!payload && (
         <EmptyState
@@ -187,7 +190,7 @@ export function StagePayloadPreviewPanel({
             )}
           </section>
 
-          <CodeBlock label="Read-only payload JSON">
+          <CodeBlock label="Read-only payload JSON" collapsible>
             {JSON.stringify(payload, null, 2)}
           </CodeBlock>
         </>

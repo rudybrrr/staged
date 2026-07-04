@@ -5,6 +5,7 @@ import { CodeBlock, EmptyState, MetricPill, Panel, StatusBadge } from "../../ui"
 
 type SafetyGatePanelProps = {
   result: SafetyGateResult | null;
+  embedded?: boolean;
 };
 
 const statusLabels: Record<SafetyGateResult["status"], string> = {
@@ -17,7 +18,7 @@ function yesNo(value: boolean) {
   return value ? "Yes" : "No";
 }
 
-export function SafetyGatePanel({ result }: SafetyGatePanelProps) {
+export function SafetyGatePanel({ result, embedded = false }: SafetyGatePanelProps) {
   const isBlocked = result?.status === "blocked";
 
   return (
@@ -33,6 +34,7 @@ export function SafetyGatePanel({ result }: SafetyGatePanelProps) {
       description="Local pattern scan only. No data is sent anywhere."
       status={result ? { tone: result.status, label: statusLabels[result.status] } : undefined}
       className={isBlocked ? "!border-red-900/70" : undefined}
+      variant={embedded ? "inset" : "default"}
     >
       {!result && (
         <EmptyState
@@ -175,7 +177,10 @@ export function SafetyGatePanel({ result }: SafetyGatePanelProps) {
             </ul>
           </section>
 
-          <CodeBlock label="Redacted payload preview (original Stage Payload is unchanged)">
+          <CodeBlock
+            label="Redacted payload preview (original Stage Payload is unchanged)"
+            collapsible
+          >
             {result.redacted_payload_preview}
           </CodeBlock>
         </>

@@ -15,6 +15,7 @@ import {
 
 type StageReportPanelProps = {
   report: StageReport | null;
+  embedded?: boolean;
 };
 
 const riskTones: Record<StageReport["risk_findings"][number]["level"], StatusTone> = {
@@ -55,7 +56,7 @@ function commandStatus(report: StageReport) {
   return commandResult.success ? "Succeeded" : "Failed";
 }
 
-export function StageReportPanel({ report }: StageReportPanelProps) {
+export function StageReportPanel({ report, embedded = false }: StageReportPanelProps) {
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">(
     "idle",
   );
@@ -88,6 +89,7 @@ export function StageReportPanel({ report }: StageReportPanelProps) {
       icon={<FileText className="h-5 w-5" />}
       description="Local preview only. No AI review has been generated."
       status={report ? { tone: "preview", label: "Preview only" } : undefined}
+      variant={embedded ? "inset" : "default"}
     >
       {!report && (
         <EmptyState
@@ -333,10 +335,12 @@ export function StageReportPanel({ report }: StageReportPanelProps) {
               Local preview only. Copy stays in this app session.
             </p>
 
-            <CodeBlock className="mt-3">{markdown}</CodeBlock>
+            <CodeBlock className="mt-3" label="Markdown preview" collapsible>
+              {markdown}
+            </CodeBlock>
           </section>
 
-          <CodeBlock label="Read-only report JSON">
+          <CodeBlock label="Read-only report JSON" collapsible>
             {JSON.stringify(report, null, 2)}
           </CodeBlock>
         </>

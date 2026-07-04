@@ -10,9 +10,9 @@ export interface AppShellProps {
 
 const RAIL_STICKY_CLASSES = {
   none: "",
-  header: "lg:sticky lg:top-16 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto",
-  pipeline: "lg:sticky lg:top-11 lg:max-h-[calc(100vh-2.75rem)] lg:overflow-y-auto",
-  both: "lg:sticky lg:top-[6.75rem] lg:max-h-[calc(100vh-6.75rem)] lg:overflow-y-auto",
+  header: "lg:sticky lg:top-16",
+  pipeline: "lg:sticky lg:top-11",
+  both: "lg:sticky lg:top-[6.75rem]",
 } as const;
 
 export function AppShell({
@@ -39,7 +39,7 @@ export function AppShell({
           <div className="mx-auto max-w-7xl">{pipeline}</div>
         </div>
       ) : null}
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-6 py-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-6 py-8 lg:grid-cols-[minmax(0,1fr)_26rem]">
         <div className="min-w-0 space-y-8">{children}</div>
         {rail ? (
           <div className={`min-w-0 space-y-8 ${railStickyClasses}`}>{rail}</div>

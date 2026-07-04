@@ -17,11 +17,7 @@ import {
 import { DiffViewerPanel } from "./features/diff-viewer/DiffViewerPanel";
 import { PreStageScreeningPanel } from "./features/pre-stage-screening/PreStageScreeningPanel";
 import { RepoPicker } from "./features/repo-picker/RepoPicker";
-import { SafetyGatePanel } from "./features/safety-gate/SafetyGatePanel";
-import { StageReportPanel } from "./features/stage-report/StageReportPanel";
-import { StagePayloadPreviewPanel } from "./features/stage-payload/StagePayloadPreviewPanel";
-import { StagingGroundPanel } from "./features/staging-ground/StagingGroundPanel";
-import { TokenBudgetPanel } from "./features/token-budget/TokenBudgetPanel";
+import { ReviewRailPanel } from "./features/review-rail";
 import {
   getFileDiff,
   inspectRepo,
@@ -466,20 +462,15 @@ export default function App() {
       header={header}
       pipeline={<PipelineStrip steps={pipelineSteps} />}
       rail={
-        <>
-          <StagePayloadPreviewPanel payload={stagePayload} />
-
-          <TokenBudgetPanel budget={tokenBudget} />
-
-          <StagingGroundPanel
-            hasValidRepo={repoSummary?.is_git_repo ?? false}
-            readiness={stagingGroundReadiness}
-          />
-
-          <SafetyGatePanel result={safetyGateResult} />
-
-          <StageReportPanel report={stageReport} />
-        </>
+        <ReviewRailPanel
+          stagePayload={stagePayload}
+          tokenBudget={tokenBudget}
+          safetyGateResult={safetyGateResult}
+          stageReport={stageReport}
+          stagingGroundReadiness={stagingGroundReadiness}
+          hasValidRepo={repoSummary?.is_git_repo ?? false}
+          pipelineSteps={pipelineSteps}
+        />
       }
     >
       <SectionHeader
