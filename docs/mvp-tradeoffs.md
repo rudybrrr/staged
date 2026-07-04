@@ -77,7 +77,7 @@ Milestone 12 does not include a full redesign, branding overhaul, shadcn/ui adop
 status-badge unification, a visible evidence pipeline strip with a rebalanced layout, a review
 rail verdict card with collapsed payload/token details, evidence workbench grouping (Source /
 Diff / Screening) with improved code/output readability, and a screenshot-readiness regression
-pass. It restyled and regrouped existing panels only — no product behavior, backend behavior,
+pass. It restyled and regrouped existing panels only; no product behavior, backend behavior,
 AI/API integration, RAG implementation, Stage History, or persistence was added. The app is now
 more portfolio-demo and screenshot ready.
 

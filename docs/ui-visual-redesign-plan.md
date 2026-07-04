@@ -2,13 +2,13 @@
 
 Status: Implemented. All five 12F slices (12F-1 through 12F-5) have shipped.
 
-This document turns the approved screenshot-based visual critique into a concrete,
-Sonnet-implementable plan. It is a **visual redesign only**: it restyles and rearranges
-existing panels and primitives. It does not change product behavior, evidence sources,
+This document records the completed 12F visual redesign pass that came out of the approved
+screenshot-readiness critique. It is a **visual redesign only**: it restyled and rearranged
+existing panels and primitives. It did not change product behavior, evidence sources,
 the AI boundary, backend, or Tauri configuration.
 
 Design basis and predecessor: `docs/ui-polish-spec.md` (first polish pass, Milestone 12).
-This plan is the follow-up visual pass (`12F`) after that milestone.
+12F was the follow-up visual pass after that milestone and is now implemented.
 
 Stack: Tauri v2 + React + TypeScript + Tailwind. `lucide-react` is available.
 
@@ -356,12 +356,13 @@ Small, independently shippable Sonnet tasks. Each leaves the app fully working. 
 - **Commit message:** `feat(ui): group evidence workbench and improve output readability (12F-4)`
 
 ### 12F-5 — Screenshot-readiness regression pass
-- **Goal:** final polish and consistency sweep against the acceptance criteria; capture README
-  screenshots.
+- **Goal:** final polish and consistency sweep against the acceptance criteria; make the app
+  ready for future README screenshots/GIFs.
 - **Allowed files:** any `src/app/**` presentation tweak needed to meet §11; no logic files.
 - **Forbidden:** no behavior/backend/AI changes; no dependency changes.
 - **Manual verification:** run through §11 checklist in empty, clean-repo, and warning-gate
-  states; confirm no visual regressions vs prior slices; take README screenshots.
+  states; confirm no visual regressions vs prior slices; leave README screenshots/GIFs as a
+  separate follow-up path.
 - **Commit message:** `chore(ui): screenshot-readiness regression pass (12F-5)`
 
 ---

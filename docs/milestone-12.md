@@ -12,7 +12,7 @@ Staged already has a strong local verification spine, but the current UI is too 
 
 Milestone 11 completed Markdown Export, closing out the local verification and reporting spine. Before provider/API integration begins, Staged needs a focused visual polish pass so the existing workflow reads clearly and demos well.
 
-This milestone is documentation and planning only. It does not change code, Rust, package files, lockfiles, or Tauri configuration. The design basis for implementation is `docs/ui-polish-spec.md`, which defines the layout, visual system, component plan, icon plan, interaction states, and slice-by-slice conversion plan referenced below.
+This milestone was a visual UI implementation pass guided by `docs/ui-polish-spec.md`, which defines the layout, visual system, component plan, icon plan, interaction states, and slice-by-slice conversion plan referenced below. It did not change Rust, backend behavior, Tauri configuration, product behavior, AI/API integration, RAG implementation, Stage History, or persistence.
 
 ## Product Context
 
@@ -122,6 +122,6 @@ Deeper design-system work, shadcn/ui adoption, animation, and responsive/mobile 
 
 ### Follow-up: 12F visual redesign pass (complete)
 
-A follow-up visual-only redesign pass, `12F`, is planned in `docs/ui-visual-redesign-plan.md` and is now implemented (slices 12F-1 through 12F-5): visual foundation and status-badge unification, an evidence pipeline strip with a rebalanced layout, a review rail verdict card with collapsed payload/token details, evidence workbench grouping (Source / Diff / Screening) with improved code/output readability, and a screenshot-readiness regression pass.
+A follow-up visual-only redesign pass, `12F`, was planned in `docs/ui-visual-redesign-plan.md` and is now implemented (slices 12F-1 through 12F-5): visual foundation and status-badge unification, an evidence pipeline strip with a rebalanced layout, a review rail verdict card with collapsed payload/token details, evidence workbench grouping (Source / Diff / Screening) with improved code/output readability, and a screenshot-readiness regression pass.
 
 12F restyled and regrouped existing panels only. No product behavior, backend behavior, AI/API integration, RAG implementation, Stage History, or persistence was added. The app is now more portfolio-demo and screenshot ready. Accessibility, responsive/mobile refinements, README screenshots/GIFs, possible shadcn/ui adoption, and deeper design-system work remain separate future expansion paths, tracked in `docs/mvp-tradeoffs.md`.
