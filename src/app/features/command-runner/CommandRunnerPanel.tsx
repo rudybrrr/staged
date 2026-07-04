@@ -246,6 +246,13 @@ export function CommandRunnerPanel({
         </div>
       )}
 
+      {hasAvailableCommands && !isRunning && !error && !result && (
+        <EmptyState
+          title="No command run yet"
+          description="Run one of the commands above to see its output here."
+        />
+      )}
+
       {result && (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">

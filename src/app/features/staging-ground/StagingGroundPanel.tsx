@@ -125,62 +125,66 @@ export function StagingGroundPanel({
         />
       )}
 
-      <section>
-        <h3 className="text-sm font-medium text-zinc-200">
-          Readiness checklist
-        </h3>
-        <dl className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {checklist.map((item) => (
-            <div
-              key={item.id}
-              className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-3"
-            >
-              <dt className="text-sm text-zinc-500">{item.label}</dt>
-              <dd className="mt-2">
-                <StatusBadge tone={item.state.tone}>{item.state.label}</StatusBadge>
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-
-      <section>
-        <h3 className="text-sm font-medium text-zinc-200">
-          Readiness messages
-        </h3>
-        <ul className="mt-3 space-y-2">
-          {readiness.messages.map((message) => (
-            <li
-              key={message.id}
-              className="flex flex-wrap items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm leading-6 text-zinc-300"
-            >
-              <StatusBadge tone={messageTones[message.level]}>
-                {message.level}
-              </StatusBadge>
-              {message.message}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="rounded-lg border border-zinc-800 bg-zinc-950 p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+      {hasValidRepo && readiness.has_payload && (
+        <>
+          <section>
             <h3 className="text-sm font-medium text-zinc-200">
-              Future AI review
+              Readiness checklist
             </h3>
-            <p className="mt-2 text-sm leading-6 text-zinc-500">
-              No AI review has been generated. AI submission is disabled in
-              this build — this is a local preview before any future model
-              call, gated by a passing or warning-only Safety Gate.
-            </p>
-          </div>
+            <dl className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {checklist.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-3"
+                >
+                  <dt className="text-sm text-zinc-500">{item.label}</dt>
+                  <dd className="mt-2">
+                    <StatusBadge tone={item.state.tone}>{item.state.label}</StatusBadge>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </section>
 
-          <ActionButton variant="secondary" disabled className="w-fit">
-            AI review not implemented
-          </ActionButton>
-        </div>
-      </section>
+          <section>
+            <h3 className="text-sm font-medium text-zinc-200">
+              Readiness messages
+            </h3>
+            <ul className="mt-3 space-y-2">
+              {readiness.messages.map((message) => (
+                <li
+                  key={message.id}
+                  className="flex flex-wrap items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm leading-6 text-zinc-300"
+                >
+                  <StatusBadge tone={messageTones[message.level]}>
+                    {message.level}
+                  </StatusBadge>
+                  {message.message}
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="rounded-lg border border-zinc-800 bg-zinc-950 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-zinc-200">
+                  Future AI review
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-zinc-500">
+                  No AI review has been generated. AI submission is disabled in
+                  this build — this is a local preview before any future model
+                  call, gated by a passing or warning-only Safety Gate.
+                </p>
+              </div>
+
+              <ActionButton variant="secondary" disabled className="w-fit">
+                AI review not implemented
+              </ActionButton>
+            </div>
+          </section>
+        </>
+      )}
     </Panel>
   );
 }

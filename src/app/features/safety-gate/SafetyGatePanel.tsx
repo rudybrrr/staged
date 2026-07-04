@@ -32,7 +32,7 @@ export function SafetyGatePanel({ result }: SafetyGatePanelProps) {
       }
       description="Local pattern scan only. No data is sent anywhere."
       status={result ? { tone: result.status, label: statusLabels[result.status] } : undefined}
-      className={isBlocked ? "border-red-900/70" : undefined}
+      className={isBlocked ? "!border-red-900/70" : undefined}
     >
       {!result && (
         <EmptyState

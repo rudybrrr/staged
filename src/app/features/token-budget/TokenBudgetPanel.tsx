@@ -65,7 +65,7 @@ export function TokenBudgetPanel({ budget }: TokenBudgetPanelProps) {
             <h3 className="text-sm font-medium text-zinc-200">
               Section contributions
             </h3>
-            <div className="mt-3 overflow-hidden rounded-lg border border-zinc-800">
+            <div className="mt-3 overflow-x-auto rounded-lg border border-zinc-800">
               <table className="w-full border-collapse text-left text-sm">
                 <thead className="bg-zinc-950 text-xs uppercase tracking-wide text-zinc-500">
                   <tr>
