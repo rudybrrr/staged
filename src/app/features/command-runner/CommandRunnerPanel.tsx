@@ -12,7 +12,7 @@ import {
   ActionButton,
   CodeBlock,
   EmptyState,
-  MetricPill,
+  Metric,
   Panel,
   StatusBadge,
 } from "../../ui";
@@ -255,12 +255,12 @@ export function CommandRunnerPanel({
 
       {result && (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-6">
             <StatusBadge tone={result.success ? "pass" : "fail"}>
               {result.success ? "Success" : "Failure"}
             </StatusBadge>
-            <MetricPill label="Exit code" value={result.exit_code ?? "null"} />
-            <MetricPill label="Duration" value={`${result.duration_ms} ms`} />
+            <Metric label="Exit code" value={result.exit_code ?? "null"} />
+            <Metric label="Duration" value={`${result.duration_ms} ms`} />
           </div>
 
           <div>

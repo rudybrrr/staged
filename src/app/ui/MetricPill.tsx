@@ -47,7 +47,7 @@ export interface MetricProps {
 export function Metric({ label, value, className = "" }: MetricProps) {
   return (
     <div className={`flex flex-col gap-0.5 ${className}`}>
-      <span className="text-lg font-semibold tabular-nums text-zinc-100">{value}</span>
+      <span className="text-2xl font-semibold tabular-nums text-zinc-50">{value}</span>
       <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
         {label}
       </span>

@@ -21,6 +21,7 @@ export function DiffViewerPanel({
       title="Diff viewer"
       icon={<GitCompare className="h-5 w-5" />}
       description="Local, read-only diff output."
+      variant="emphasis"
     >
       {!selectedFile && (
         <EmptyState
@@ -31,11 +32,12 @@ export function DiffViewerPanel({
       )}
 
       {selectedFile && (
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-            Selected file
-          </p>
-          <p className="mt-2 break-all rounded-lg border border-zinc-800 bg-zinc-950 p-3 font-mono text-sm text-zinc-200">
+        <div className="flex min-w-0 items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2">
+          <GitCompare className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
+          <p
+            className="min-w-0 flex-1 truncate font-mono text-sm text-zinc-100"
+            title={selectedFile.file_path}
+          >
             {selectedFile.file_path}
           </p>
         </div>

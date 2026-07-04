@@ -1,7 +1,7 @@
 import { FileDiff } from "lucide-react";
 
 import type { ChangedFile } from "../../lib/repo";
-import { ActionButton, EmptyState, Panel } from "../../ui";
+import { ActionButton, EmptyState, Metric, Panel } from "../../ui";
 
 type ChangedFilesPanelProps = {
   files: ChangedFile[];
@@ -40,6 +40,9 @@ function statusClassName(status: ChangedFile["status"]) {
   }
 }
 
+const badgeClassName =
+  "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium";
+
 function fileIndicators(file: ChangedFile) {
   if (file.is_untracked) {
     return [];
@@ -70,14 +73,13 @@ export function ChangedFilesPanel({
     <Panel
       title="Changed files"
       icon={<FileDiff className="h-5 w-5" />}
-      status={{
-        tone: "idle",
-        label: `${files.length} ${files.length === 1 ? "file" : "files"}`,
-      }}
       actions={
-        <ActionButton variant="secondary" onClick={onRefresh} disabled={isLoading}>
-          {isLoading ? "Refreshing..." : "Refresh"}
-        </ActionButton>
+        <div className="flex items-center gap-4">
+          <Metric label={files.length === 1 ? "File" : "Files"} value={files.length} />
+          <ActionButton variant="secondary" onClick={onRefresh} disabled={isLoading}>
+            {isLoading ? "Refreshing..." : "Refresh"}
+          </ActionButton>
+        </div>
       }
     >
       {isLoading && (
@@ -117,18 +119,24 @@ export function ChangedFilesPanel({
                   onClick={() => onSelectFile(file)}
                   className={`w-full border-l-2 p-4 text-left transition hover:bg-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 ${
                     isSelected
-                      ? "border-zinc-100 bg-zinc-900"
+                      ? "border-zinc-100 bg-zinc-800/70"
                       : "border-transparent"
                   }`}
                 >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                      <p className="break-all font-mono text-sm text-zinc-100">
+                      <p
+                        className="truncate font-mono text-sm text-zinc-100"
+                        title={file.file_path}
+                      >
                         {file.file_path}
                       </p>
 
                       {showOldPath && (
-                        <p className="mt-2 break-all font-mono text-xs text-zinc-500">
+                        <p
+                          className="mt-2 truncate font-mono text-xs text-zinc-500"
+                          title={file.old_file_path ?? undefined}
+                        >
                           from {file.old_file_path}
                         </p>
                       )}
@@ -136,9 +144,7 @@ export function ChangedFilesPanel({
 
                     <div className="flex flex-wrap gap-2 sm:justify-end">
                       <span
-                        className={`rounded-full border px-2.5 py-1 text-xs font-medium ${statusClassName(
-                          file.status,
-                        )}`}
+                        className={`${badgeClassName} ${statusClassName(file.status)}`}
                       >
                         {statusLabels[file.status]}
                       </span>
@@ -146,7 +152,7 @@ export function ChangedFilesPanel({
                       {indicators.map((indicator) => (
                         <span
                           key={indicator}
-                          className="rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs font-medium text-zinc-300"
+                          className={`${badgeClassName} border-zinc-700 bg-zinc-900 text-zinc-300`}
                         >
                           {indicator}
                         </span>

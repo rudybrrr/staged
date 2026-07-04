@@ -42,13 +42,17 @@ export function CodeBlock({
   }
 
   return (
-    <div className={className}>
+    <div
+      className={`overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 ${className}`}
+    >
       {label ? (
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
-          {label}
-        </p>
+        <div className="flex items-center justify-between gap-3 border-b border-zinc-800 px-3 py-1.5">
+          <span className="text-[11px] uppercase tracking-wide text-zinc-500">
+            {label}
+          </span>
+        </div>
       ) : null}
-      <pre className="max-h-[32rem] overflow-auto whitespace-pre rounded-lg border border-zinc-800 bg-zinc-950 p-4 font-mono text-sm leading-6 text-zinc-200">
+      <pre className="max-h-[32rem] overflow-x-auto overflow-y-auto whitespace-pre p-4 font-mono text-[13px] leading-6 text-zinc-300">
         {children}
       </pre>
     </div>

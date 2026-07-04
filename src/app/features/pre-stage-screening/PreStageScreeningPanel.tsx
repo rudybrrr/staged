@@ -12,7 +12,7 @@ import {
   changedFileStatuses,
   type ScreeningFinding,
 } from "../../lib/screening";
-import { EmptyState, MetricPill, Panel, StatusBadge, type StatusTone } from "../../ui";
+import { EmptyState, Metric, MetricPill, Panel, StatusBadge, type StatusTone } from "../../ui";
 
 type PreStageScreeningPanelProps = {
   repoSummary: RepoSummary | null;
@@ -58,6 +58,13 @@ const levelTone: Record<ScreeningFinding["level"], StatusTone> = {
   fail: "fail",
 };
 
+const levelAccentBorder: Record<ScreeningFinding["level"], string> = {
+  pass: "border-l-emerald-500/60",
+  info: "border-l-zinc-600",
+  warning: "border-l-amber-500/60",
+  fail: "border-l-red-500/60",
+};
+
 export function PreStageScreeningPanel({
   repoSummary,
   changedFiles,
@@ -90,6 +97,11 @@ export function PreStageScreeningPanel({
       icon={<ClipboardCheck className="h-5 w-5" />}
       description="Deterministic local checks only. No AI review yet."
       status={isValidRepo ? { tone: "preview", label: "Read-only" } : undefined}
+      actions={
+        isValidRepo ? (
+          <Metric label="Findings" value={findings.length} />
+        ) : undefined
+      }
     >
       {!isValidRepo && (
         <EmptyState
@@ -217,10 +229,10 @@ export function PreStageScreeningPanel({
                       {levelFindings.map((finding) => (
                         <li
                           key={finding.id}
-                          className="rounded-lg border border-zinc-800 bg-zinc-950 p-4"
+                          className={`rounded-lg border border-l-2 border-zinc-800 bg-zinc-950 p-4 ${levelAccentBorder[finding.level]}`}
                         >
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                            <div>
+                            <div className="min-w-0">
                               <p className="text-sm font-medium text-zinc-100">
                                 {finding.title}
                               </p>
@@ -229,7 +241,7 @@ export function PreStageScreeningPanel({
                               </p>
                             </div>
 
-                            <span className="w-fit rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs font-medium text-zinc-300">
+                            <span className="w-fit rounded-md border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-xs font-medium text-zinc-300">
                               {sourceLabels[finding.source]}
                             </span>
                           </div>
