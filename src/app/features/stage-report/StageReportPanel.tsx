@@ -1,26 +1,44 @@
 import { useMemo, useState } from "react";
+import { AlertTriangle, Copy, FileText, Info, ShieldAlert } from "lucide-react";
 
 import type { StageReport } from "../../lib/stageReport";
 import { formatStageReportMarkdown } from "../../lib/stageReportMarkdown";
+import {
+  ActionButton,
+  CodeBlock,
+  EmptyState,
+  MetricPill,
+  Panel,
+  StatusBadge,
+  type StatusTone,
+} from "../../ui";
 
 type StageReportPanelProps = {
   report: StageReport | null;
 };
 
-const riskStyles: Record<StageReport["risk_findings"][number]["level"], string> = {
-  info: "border-zinc-800 bg-zinc-950 text-zinc-300",
-  warning: "border-amber-900/70 bg-amber-950/30 text-amber-100",
-  high: "border-red-900/70 bg-red-950/30 text-red-100",
+const riskTones: Record<StageReport["risk_findings"][number]["level"], StatusTone> = {
+  info: "info",
+  warning: "warning",
+  high: "fail",
 };
 
-const recommendationStyles: Record<
+const recommendationTones: Record<
   StageReport["recommendation"]["decision"],
-  string
+  StatusTone
 > = {
-  review_manually: "border-amber-900/70 bg-amber-950/30 text-amber-100",
-  do_not_submit: "border-red-900/70 bg-red-950/30 text-red-100",
-  ready_for_future_ai_review:
-    "border-emerald-900/70 bg-emerald-950/30 text-emerald-100",
+  review_manually: "warning",
+  do_not_submit: "blocked",
+  ready_for_future_ai_review: "info",
+};
+
+const recommendationIcons: Record<
+  StageReport["recommendation"]["decision"],
+  typeof AlertTriangle
+> = {
+  review_manually: AlertTriangle,
+  do_not_submit: ShieldAlert,
+  ready_for_future_ai_review: Info,
 };
 
 function statusLabel(value: string) {
@@ -60,84 +78,32 @@ export function StageReportPanel({ report }: StageReportPanelProps) {
     }
   }
 
+  const RecommendationIcon = report
+    ? recommendationIcons[report.recommendation.decision]
+    : null;
+
   return (
-    <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="text-lg font-medium">Stage Report</h2>
-          <p className="mt-2 text-sm leading-6 text-zinc-500">
-            Local preview only. No AI review has been generated.
-          </p>
-        </div>
-
-        {report && (
-          <div className="flex flex-col items-start gap-2 sm:items-end">
-            <span className="w-fit rounded-full border border-zinc-700 bg-zinc-950 px-3 py-1 text-xs font-medium text-zinc-300">
-              Preview only
-            </span>
-            <div className="flex items-center gap-3">
-              {copyStatus === "copied" && (
-                <span className="text-xs font-medium text-emerald-300">
-                  Copied
-                </span>
-              )}
-              {copyStatus === "error" && (
-                <span className="text-xs font-medium text-red-300">
-                  Copy failed
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={copyMarkdown}
-                className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm font-medium text-zinc-100 transition hover:border-zinc-500 hover:bg-zinc-900"
-              >
-                Copy Markdown
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
+    <Panel
+      title="Stage Report"
+      icon={<FileText className="h-5 w-5" />}
+      description="Local preview only. No AI review has been generated."
+      status={report ? { tone: "preview", label: "Preview only" } : undefined}
+    >
       {!report && (
-        <p className="mt-4 text-sm text-zinc-500">
-          Select a valid Git repository to build a Stage Payload before viewing
-          the local Stage Report preview.
-        </p>
+        <EmptyState
+          icon={<FileText className="h-5 w-5" />}
+          title="No Stage Report yet"
+          description="Select a valid Git repository to build a Stage Payload before viewing the local Stage Report preview."
+        />
       )}
 
       {report && (
-        <div className="mt-6 space-y-6">
-          <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <dt className="text-sm text-zinc-500">Generation mode</dt>
-              <dd className="mt-1 text-sm font-medium capitalize text-zinc-100">
-                {statusLabel(report.generation_mode)}
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm text-zinc-500">Report status</dt>
-              <dd className="mt-1 text-sm font-medium capitalize text-zinc-100">
-                {statusLabel(report.report_status)}
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm text-zinc-500">Generated at</dt>
-              <dd className="mt-1 break-all text-sm font-medium text-zinc-100">
-                {report.generated_at}
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm text-zinc-500">Recommendation</dt>
-              <dd
-                className={`mt-1 w-fit rounded-full border px-2 py-1 text-xs font-medium capitalize ${recommendationStyles[report.recommendation.decision]}`}
-              >
-                {statusLabel(report.recommendation.decision)}
-              </dd>
-            </div>
-          </dl>
+        <>
+          <div className="flex flex-wrap gap-2">
+            <MetricPill label="Generation mode" value={statusLabel(report.generation_mode)} />
+            <MetricPill label="Report status" value={statusLabel(report.report_status)} />
+            <MetricPill label="Generated at" value={report.generated_at} />
+          </div>
 
           <section>
             <h3 className="text-sm font-medium text-zinc-200">Summary</h3>
@@ -176,36 +142,37 @@ export function StageReportPanel({ report }: StageReportPanelProps) {
             <h3 className="text-sm font-medium text-zinc-200">
               Deterministic evidence
             </h3>
-            <dl className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div>
-                <dt className="text-sm text-zinc-500">Screening findings</dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-100">
-                  {report.deterministic_evidence.screening_findings.length}
-                </dd>
-              </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <MetricPill
+                label="Screening findings"
+                value={report.deterministic_evidence.screening_findings.length}
+              />
+              <MetricPill
+                label="Command result"
+                value={commandStatus(report)}
+                tone={
+                  report.deterministic_evidence.command_result
+                    ? report.deterministic_evidence.command_result.success
+                      ? "pass"
+                      : "fail"
+                    : "idle"
+                }
+              />
+              <MetricPill
+                label="Estimated tokens"
+                value={
+                  report.deterministic_evidence.token_budget_estimated_tokens ??
+                  "Unknown"
+                }
+              />
+            </div>
 
-              <div>
-                <dt className="text-sm text-zinc-500">Command result</dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-100">
-                  {commandStatus(report)}
-                </dd>
-              </div>
-
-              <div>
-                <dt className="text-sm text-zinc-500">Safety Gate</dt>
-                <dd className="mt-1 text-sm font-medium capitalize text-zinc-100">
-                  {report.deterministic_evidence.safety_gate_status}
-                </dd>
-              </div>
-
-              <div>
-                <dt className="text-sm text-zinc-500">Estimated tokens</dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-100">
-                  {report.deterministic_evidence.token_budget_estimated_tokens ??
-                    "Unknown"}
-                </dd>
-              </div>
-            </dl>
+            <div className="mt-3 flex items-center gap-2">
+              <span className="text-sm text-zinc-500">Safety Gate</span>
+              <StatusBadge tone={report.deterministic_evidence.safety_gate_status}>
+                {statusLabel(report.deterministic_evidence.safety_gate_status)}
+              </StatusBadge>
+            </div>
 
             {report.deterministic_evidence.command_result && (
               <dl className="mt-4 grid gap-4 rounded-lg border border-zinc-800 bg-zinc-950 p-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -264,15 +231,24 @@ export function StageReportPanel({ report }: StageReportPanelProps) {
               {report.risk_findings.map((finding) => (
                 <li
                   key={finding.id}
-                  className={`rounded-lg border px-3 py-2 text-sm leading-6 ${riskStyles[finding.level]}`}
+                  className="rounded-lg border border-zinc-800 bg-zinc-950 p-4"
                 >
-                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                    <span className="font-medium">{finding.title}</span>
-                    <span className="text-xs uppercase tracking-wide opacity-80">
-                      {finding.level} / {finding.source}
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex items-center gap-2">
+                      <StatusBadge tone={riskTones[finding.level]}>
+                        {finding.level}
+                      </StatusBadge>
+                      <span className="text-sm font-medium text-zinc-100">
+                        {finding.title}
+                      </span>
+                    </div>
+                    <span className="text-xs uppercase tracking-wide text-zinc-500">
+                      {finding.source}
                     </span>
                   </div>
-                  <p className="mt-1 opacity-90">{finding.detail}</p>
+                  <p className="mt-2 text-sm leading-6 text-zinc-400">
+                    {finding.detail}
+                  </p>
                 </li>
               ))}
             </ul>
@@ -316,16 +292,22 @@ export function StageReportPanel({ report }: StageReportPanelProps) {
             </ul>
           </section>
 
-          <section
-            className={`rounded-lg border p-4 ${recommendationStyles[report.recommendation.decision]}`}
-          >
-            <h3 className="text-sm font-medium text-current">Recommendation</h3>
-            <p className="mt-2 text-sm leading-6 opacity-90">
-              <span className="font-medium capitalize">
+          <section className="rounded-lg border border-zinc-800 bg-zinc-950 p-4">
+            <div className="flex items-center gap-2">
+              {RecommendationIcon && (
+                <RecommendationIcon className="h-4 w-4 flex-none text-zinc-400" />
+              )}
+              <h3 className="text-sm font-medium text-zinc-200">Recommendation</h3>
+              <StatusBadge tone={recommendationTones[report.recommendation.decision]}>
                 {statusLabel(report.recommendation.decision)}
-              </span>
-              <span className="text-zinc-500"> / </span>
+              </StatusBadge>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-zinc-400">
               {report.recommendation.rationale}
+            </p>
+            <p className="mt-2 text-xs leading-5 text-zinc-600">
+              This preview never confirms code is safe to commit and does not
+              reflect any AI review.
             </p>
           </section>
 
@@ -334,29 +316,31 @@ export function StageReportPanel({ report }: StageReportPanelProps) {
               <h3 className="text-sm font-medium text-zinc-200">
                 Read-only Markdown export
               </h3>
-              <p className="text-xs text-zinc-500">
-                Local preview only. Copy stays in this app session.
-              </p>
+              <div className="flex items-center gap-3">
+                {copyStatus === "copied" && (
+                  <StatusBadge tone="pass">Copied</StatusBadge>
+                )}
+                {copyStatus === "error" && (
+                  <StatusBadge tone="fail">Copy failed</StatusBadge>
+                )}
+                <ActionButton variant="secondary" onClick={copyMarkdown}>
+                  <Copy className="h-4 w-4" />
+                  Copy Markdown
+                </ActionButton>
+              </div>
             </div>
+            <p className="mt-1 text-xs text-zinc-500">
+              Local preview only. Copy stays in this app session.
+            </p>
 
-            <pre className="mt-3 max-h-[24rem] overflow-auto whitespace-pre-wrap rounded-lg border border-zinc-800 bg-zinc-950 p-4 font-mono text-sm leading-6 text-zinc-200">{markdown}</pre>
+            <CodeBlock className="mt-3">{markdown}</CodeBlock>
           </section>
 
-          <section>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <h3 className="text-sm font-medium text-zinc-200">
-                Read-only report JSON
-              </h3>
-              <p className="text-xs text-zinc-500">
-                Generated locally from current frontend state.
-              </p>
-            </div>
-
-            <pre className="mt-3 max-h-[32rem] overflow-auto whitespace-pre rounded-lg border border-zinc-800 bg-zinc-950 p-4 font-mono text-sm leading-6 text-zinc-200">{JSON.stringify(report, null, 2)}</pre>
-          </section>
-        </div>
+          <CodeBlock label="Read-only report JSON">
+            {JSON.stringify(report, null, 2)}
+          </CodeBlock>
+        </>
       )}
-    </div>
+    </Panel>
   );
 }
-

@@ -1,4 +1,7 @@
+import { Package } from "lucide-react";
+
 import type { StagePayload } from "../../lib/stagePayload";
+import { CodeBlock, EmptyState, MetricPill, Panel, StatusBadge } from "../../ui";
 
 type StagePayloadPreviewPanelProps = {
   payload: StagePayload | null;
@@ -16,90 +19,53 @@ function commandStatus(payload: StagePayload) {
   return payload.command_result.success ? "Succeeded" : "Failed";
 }
 
-function yesNo(value: boolean) {
-  return value ? "Yes" : "No";
-}
-
 export function StagePayloadPreviewPanel({
   payload,
 }: StagePayloadPreviewPanelProps) {
   return (
-    <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="text-lg font-medium">Stage Payload</h2>
-          <p className="mt-2 text-sm leading-6 text-zinc-500">
-            Local preview only. No AI call has been made. Secret redaction is
-            not implemented yet.
-          </p>
-        </div>
-
-        {payload && (
-          <span className="w-fit rounded-full border border-zinc-700 bg-zinc-950 px-3 py-1 text-xs font-medium text-zinc-300">
-            Read-only JSON
-          </span>
-        )}
-      </div>
-
+    <Panel
+      title="Stage Payload"
+      icon={<Package className="h-5 w-5" />}
+      description="Local preview only. No AI call has been made. Secret redaction is not implemented yet."
+      status={payload ? { tone: "preview", label: "Read-only JSON" } : undefined}
+    >
       {!payload && (
-        <p className="mt-4 text-sm text-zinc-500">
-          Select a valid Git repository to build a local read-only Stage Payload
-          preview.
-        </p>
+        <EmptyState
+          icon={<Package className="h-5 w-5" />}
+          title="No Stage Payload yet"
+          description="Select a valid Git repository to build a local read-only Stage Payload preview."
+        />
       )}
 
       {payload && (
-        <div className="mt-6 space-y-6">
-          <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <dt className="text-sm text-zinc-500">Schema version</dt>
-              <dd className="mt-1 break-all text-sm font-medium text-zinc-100">
-                {payload.schema_version}
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm text-zinc-500">Created at</dt>
-              <dd className="mt-1 break-all text-sm font-medium text-zinc-100">
-                {payload.created_at}
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm text-zinc-500">Repo name</dt>
-              <dd className="mt-1 break-all text-sm font-medium text-zinc-100">
-                {payload.repo.repo_name}
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm text-zinc-500">Branch</dt>
-              <dd className="mt-1 text-sm font-medium text-zinc-100">
-                {payload.repo.current_branch ?? "Detached HEAD / unknown"}
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm text-zinc-500">Changed files</dt>
-              <dd className="mt-1 text-sm font-medium text-zinc-100">
-                {payload.changes.changed_file_count}
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm text-zinc-500">Command result</dt>
-              <dd className="mt-1 text-sm font-medium text-zinc-100">
-                {commandStatus(payload)}
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm text-zinc-500">Screening findings</dt>
-              <dd className="mt-1 text-sm font-medium text-zinc-100">
-                {payload.screening_findings.length}
-              </dd>
-            </div>
-          </dl>
+        <>
+          <div className="flex flex-wrap gap-2">
+            <MetricPill label="Schema" value={payload.schema_version} />
+            <MetricPill label="Repo" value={payload.repo.repo_name} />
+            <MetricPill
+              label="Branch"
+              value={payload.repo.current_branch ?? "Detached HEAD"}
+            />
+            <MetricPill
+              label="Changed files"
+              value={payload.changes.changed_file_count}
+            />
+            <MetricPill
+              label="Screening findings"
+              value={payload.screening_findings.length}
+            />
+            <MetricPill
+              label="Command result"
+              value={commandStatus(payload)}
+              tone={
+                payload.command_result
+                  ? payload.command_result.success
+                    ? "pass"
+                    : "fail"
+                  : "idle"
+              }
+            />
+          </div>
 
           <section>
             <h3 className="text-sm font-medium text-zinc-200">
@@ -139,11 +105,19 @@ export function StagePayloadPreviewPanel({
             </h3>
             <dl className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div>
-                <dt className="text-sm text-zinc-500">Selected diff</dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-100">
-                  {yesNo(
-                    payload.payload_completeness.includes_selected_file_diff,
-                  )}
+                <dt className="text-sm text-zinc-500">Selected diff included</dt>
+                <dd className="mt-2">
+                  <StatusBadge
+                    tone={
+                      payload.payload_completeness.includes_selected_file_diff
+                        ? "pass"
+                        : "warning"
+                    }
+                  >
+                    {payload.payload_completeness.includes_selected_file_diff
+                      ? "Included"
+                      : "Missing"}
+                  </StatusBadge>
                 </dd>
               </div>
 
@@ -151,6 +125,23 @@ export function StagePayloadPreviewPanel({
                 <dt className="text-sm text-zinc-500">Selected file</dt>
                 <dd className="mt-1 break-all text-sm font-medium text-zinc-100">
                   {payload.payload_completeness.selected_file_path ?? "None"}
+                </dd>
+              </div>
+
+              <div>
+                <dt className="text-sm text-zinc-500">Command result included</dt>
+                <dd className="mt-2">
+                  <StatusBadge
+                    tone={
+                      payload.payload_completeness.command_result_included
+                        ? "pass"
+                        : "warning"
+                    }
+                  >
+                    {payload.payload_completeness.command_result_included
+                      ? "Included"
+                      : "Missing"}
+                  </StatusBadge>
                 </dd>
               </div>
 
@@ -171,13 +162,6 @@ export function StagePayloadPreviewPanel({
                     payload.payload_completeness
                       .untracked_files_without_content_count
                   }
-                </dd>
-              </div>
-
-              <div>
-                <dt className="text-sm text-zinc-500">Command result included</dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-100">
-                  {yesNo(payload.payload_completeness.command_result_included)}
                 </dd>
               </div>
             </dl>
@@ -203,20 +187,11 @@ export function StagePayloadPreviewPanel({
             )}
           </section>
 
-          <div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <h3 className="text-sm font-medium text-zinc-200">
-                Read-only payload JSON
-              </h3>
-              <p className="text-xs text-zinc-500">
-                Generated locally from already loaded frontend state.
-              </p>
-            </div>
-
-            <pre className="mt-3 max-h-[32rem] overflow-auto whitespace-pre rounded-lg border border-zinc-800 bg-zinc-950 p-4 font-mono text-sm leading-6 text-zinc-200">{JSON.stringify(payload, null, 2)}</pre>
-          </div>
-        </div>
+          <CodeBlock label="Read-only payload JSON">
+            {JSON.stringify(payload, null, 2)}
+          </CodeBlock>
+        </>
       )}
-    </div>
+    </Panel>
   );
 }

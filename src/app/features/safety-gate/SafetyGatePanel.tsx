@@ -1,4 +1,7 @@
+import { ShieldAlert, ShieldCheck } from "lucide-react";
+
 import type { SafetyGateResult } from "../../lib/safetyGate";
+import { CodeBlock, EmptyState, MetricPill, Panel, StatusBadge } from "../../ui";
 
 type SafetyGatePanelProps = {
   result: SafetyGateResult | null;
@@ -10,85 +13,60 @@ const statusLabels: Record<SafetyGateResult["status"], string> = {
   blocked: "Blocked",
 };
 
-const statusStyles: Record<SafetyGateResult["status"], string> = {
-  pass: "border-emerald-900/70 bg-emerald-950/30 text-emerald-100",
-  warning: "border-amber-900/70 bg-amber-950/30 text-amber-100",
-  blocked: "border-red-900/70 bg-red-950/30 text-red-100",
-};
-
-function findingStyles(level: SafetyGateResult["findings"][number]["level"]) {
-  if (level === "blocked") {
-    return "border-red-900/70 bg-red-950/30 text-red-100";
-  }
-
-  if (level === "warning") {
-    return "border-amber-900/70 bg-amber-950/30 text-amber-100";
-  }
-
-  return "border-zinc-800 bg-zinc-950 text-zinc-300";
-}
-
 function yesNo(value: boolean) {
   return value ? "Yes" : "No";
 }
 
 export function SafetyGatePanel({ result }: SafetyGatePanelProps) {
+  const isBlocked = result?.status === "blocked";
+
   return (
-    <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="text-lg font-medium">Safety Gate</h2>
-          <p className="mt-2 text-sm leading-6 text-zinc-500">
-            Local pattern scan only. No data is sent anywhere.
+    <Panel
+      title="Safety Gate"
+      icon={
+        isBlocked ? (
+          <ShieldAlert className="h-5 w-5 text-red-400" />
+        ) : (
+          <ShieldCheck className="h-5 w-5" />
+        )
+      }
+      description="Local pattern scan only. No data is sent anywhere."
+      status={result ? { tone: result.status, label: statusLabels[result.status] } : undefined}
+      className={isBlocked ? "border-red-900/70" : undefined}
+    >
+      {!result && (
+        <EmptyState
+          icon={<ShieldCheck className="h-5 w-5" />}
+          title="No Safety Gate scan yet"
+          description="Select a valid Git repository to scan the current Stage Payload."
+        />
+      )}
+
+      {result && isBlocked && (
+        <div className="flex items-center gap-2 rounded-lg border border-red-900/70 bg-red-950/30 p-4">
+          <ShieldAlert className="h-4 w-4 flex-none text-red-200" />
+          <p className="text-sm font-medium text-red-200">
+            Blocked — secrets present. Staging withheld.
           </p>
         </div>
-
-        {result && (
-          <span
-            className={`w-fit rounded-full border px-3 py-1 text-xs font-medium ${statusStyles[result.status]}`}
-          >
-            {statusLabels[result.status]}
-          </span>
-        )}
-      </div>
-
-      {!result && (
-        <p className="mt-4 text-sm text-zinc-500">
-          Select a valid Git repository to scan the current Stage Payload.
-        </p>
       )}
 
       {result && (
-        <div className="mt-6 space-y-6">
-          <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <dt className="text-sm text-zinc-500">Status</dt>
-              <dd className="mt-1 text-sm font-medium text-zinc-100">
-                {statusLabels[result.status]}
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm text-zinc-500">Scanned at</dt>
-              <dd className="mt-1 break-all text-sm font-medium text-zinc-100">
-                {result.scanned_at}
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm text-zinc-500">Scanner</dt>
-              <dd className="mt-1 break-all text-sm font-medium text-zinc-100">
-                {result.scanner}
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm text-zinc-500">Redactions</dt>
-              <dd className="mt-1 text-sm font-medium text-zinc-100">
-                {result.redaction_count}
-              </dd>
-            </div>
-          </dl>
+        <>
+          <div className="flex flex-wrap gap-2">
+            <MetricPill label="Scanner" value={result.scanner} />
+            <MetricPill label="Scanned at" value={result.scanned_at} />
+            <MetricPill
+              label="Redactions"
+              value={result.redaction_count}
+              tone={result.redaction_count > 0 ? "warning" : "idle"}
+            />
+            <MetricPill
+              label="Findings"
+              value={result.findings.length}
+              tone={isBlocked ? "blocked" : "idle"}
+            />
+          </div>
 
           <section>
             <h3 className="text-sm font-medium text-zinc-200">
@@ -103,8 +81,12 @@ export function SafetyGatePanel({ result }: SafetyGatePanelProps) {
                 <dt className="text-sm text-zinc-500">
                   Stage Payload JSON scanned
                 </dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-100">
-                  {yesNo(result.scan_coverage.stage_payload_json_scanned)}
+                <dd className="mt-2">
+                  <StatusBadge
+                    tone={result.scan_coverage.stage_payload_json_scanned ? "pass" : "idle"}
+                  >
+                    {yesNo(result.scan_coverage.stage_payload_json_scanned)}
+                  </StatusBadge>
                 </dd>
               </div>
 
@@ -112,8 +94,12 @@ export function SafetyGatePanel({ result }: SafetyGatePanelProps) {
                 <dt className="text-sm text-zinc-500">
                   Selected file diff scanned
                 </dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-100">
-                  {yesNo(result.scan_coverage.selected_file_diff_scanned)}
+                <dd className="mt-2">
+                  <StatusBadge
+                    tone={result.scan_coverage.selected_file_diff_scanned ? "pass" : "idle"}
+                  >
+                    {yesNo(result.scan_coverage.selected_file_diff_scanned)}
+                  </StatusBadge>
                 </dd>
               </div>
 
@@ -121,8 +107,12 @@ export function SafetyGatePanel({ result }: SafetyGatePanelProps) {
                 <dt className="text-sm text-zinc-500">
                   Selected file diff included
                 </dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-100">
-                  {yesNo(result.scan_coverage.selected_file_diff_included)}
+                <dd className="mt-2">
+                  <StatusBadge
+                    tone={result.scan_coverage.selected_file_diff_included ? "pass" : "idle"}
+                  >
+                    {yesNo(result.scan_coverage.selected_file_diff_included)}
+                  </StatusBadge>
                 </dd>
               </div>
 
@@ -141,20 +131,6 @@ export function SafetyGatePanel({ result }: SafetyGatePanelProps) {
                   {result.scan_coverage.selected_file_path ?? "None"}
                 </dd>
               </div>
-
-              <div>
-                <dt className="text-sm text-zinc-500">Redaction count</dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-100">
-                  {result.redaction_count}
-                </dd>
-              </div>
-
-              <div>
-                <dt className="text-sm text-zinc-500">Finding count</dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-100">
-                  {result.findings.length}
-                </dd>
-              </div>
             </dl>
           </section>
 
@@ -164,18 +140,22 @@ export function SafetyGatePanel({ result }: SafetyGatePanelProps) {
               {result.findings.map((finding) => (
                 <li
                   key={finding.id}
-                  className={`rounded-lg border px-3 py-2 text-sm leading-6 ${findingStyles(
-                    finding.level,
-                  )}`}
+                  className="rounded-lg border border-zinc-800 bg-zinc-950 p-4"
                 >
-                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                    <span className="font-medium">{finding.title}</span>
-                    <span className="text-xs uppercase tracking-wide opacity-80">
-                      {finding.level} / {finding.category} /{" "}
-                      {finding.match_count}
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex items-center gap-2">
+                      <StatusBadge tone={finding.level}>{finding.level}</StatusBadge>
+                      <span className="text-sm font-medium text-zinc-100">
+                        {finding.title}
+                      </span>
+                    </div>
+                    <span className="text-xs uppercase tracking-wide text-zinc-500">
+                      {finding.category} / {finding.match_count}
                     </span>
                   </div>
-                  <p className="mt-1 opacity-90">{finding.detail}</p>
+                  <p className="mt-2 text-sm leading-6 text-zinc-400">
+                    {finding.detail}
+                  </p>
                 </li>
               ))}
             </ul>
@@ -195,20 +175,11 @@ export function SafetyGatePanel({ result }: SafetyGatePanelProps) {
             </ul>
           </section>
 
-          <section>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <h3 className="text-sm font-medium text-zinc-200">
-                Redacted payload preview
-              </h3>
-              <p className="text-xs text-zinc-500">
-                Preview only. Original Stage Payload is unchanged.
-              </p>
-            </div>
-
-            <pre className="mt-3 max-h-[32rem] overflow-auto whitespace-pre rounded-lg border border-zinc-800 bg-zinc-950 p-4 font-mono text-sm leading-6 text-zinc-200">{result.redacted_payload_preview}</pre>
-          </section>
-        </div>
+          <CodeBlock label="Redacted payload preview (original Stage Payload is unchanged)">
+            {result.redacted_payload_preview}
+          </CodeBlock>
+        </>
       )}
-    </div>
+    </Panel>
   );
 }

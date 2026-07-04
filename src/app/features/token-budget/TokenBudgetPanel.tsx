@@ -1,4 +1,7 @@
+import { Gauge } from "lucide-react";
+
 import type { TokenBudget } from "../../lib/tokenBudget";
+import { EmptyState, MetricPill, Panel, StatusBadge } from "../../ui";
 
 type TokenBudgetPanelProps = {
   budget: TokenBudget | null;
@@ -8,71 +11,44 @@ function formatNumber(value: number) {
   return new Intl.NumberFormat("en-US").format(value);
 }
 
-function warningStyles(level: TokenBudget["warnings"][number]["level"]) {
-  if (level === "warning") {
-    return "border-amber-900/70 bg-amber-950/30 text-amber-100";
-  }
-
-  return "border-zinc-800 bg-zinc-950 text-zinc-300";
-}
-
 export function TokenBudgetPanel({ budget }: TokenBudgetPanelProps) {
+  const hasWarnings = budget
+    ? budget.warnings.some((warning) => warning.level === "warning")
+    : false;
+
   return (
-    <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="text-lg font-medium">Token Budget</h2>
-          <p className="mt-2 text-sm leading-6 text-zinc-500">
-            Approximate local estimate only. No model pricing or exact tokenizer
-            is included yet.
-          </p>
-        </div>
-
-        {budget && (
-          <span className="w-fit rounded-full border border-zinc-700 bg-zinc-950 px-3 py-1 text-xs font-medium text-zinc-300">
-            Read-only estimate
-          </span>
-        )}
-      </div>
-
+    <Panel
+      title="Token Budget"
+      icon={<Gauge className="h-5 w-5" />}
+      description="Approximate local estimate only. No model pricing or exact tokenizer is included yet."
+      status={
+        budget
+          ? hasWarnings
+            ? { tone: "warning", label: "Warnings" }
+            : { tone: "preview", label: "Read-only estimate" }
+          : undefined
+      }
+    >
       {!budget && (
-        <p className="mt-4 text-sm text-zinc-500">
-          Select a valid Git repository to estimate the current Stage Payload
-          size.
-        </p>
+        <EmptyState
+          icon={<Gauge className="h-5 w-5" />}
+          title="No Token Budget yet"
+          description="Select a valid Git repository to estimate the current Stage Payload size."
+        />
       )}
 
       {budget && (
-        <div className="mt-6 space-y-6">
-          <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <dt className="text-sm text-zinc-500">Estimated tokens</dt>
-              <dd className="mt-1 text-2xl font-semibold text-zinc-100">
-                {formatNumber(budget.estimated_tokens)}
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm text-zinc-500">Characters</dt>
-              <dd className="mt-1 text-sm font-medium text-zinc-100">
-                {formatNumber(budget.character_count)}
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm text-zinc-500">Bytes</dt>
-              <dd className="mt-1 text-sm font-medium text-zinc-100">
-                {formatNumber(budget.byte_count)}
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm text-zinc-500">Estimator</dt>
-              <dd className="mt-1 text-sm font-medium text-zinc-100">
-                {budget.estimator}
-              </dd>
-            </div>
-          </dl>
+        <>
+          <div className="flex flex-wrap gap-2">
+            <MetricPill
+              label="Estimated tokens"
+              value={formatNumber(budget.estimated_tokens)}
+              tone={hasWarnings ? "warning" : "idle"}
+            />
+            <MetricPill label="Characters" value={formatNumber(budget.character_count)} />
+            <MetricPill label="Bytes" value={formatNumber(budget.byte_count)} />
+            <MetricPill label="Estimator" value={budget.estimator} />
+          </div>
 
           <section>
             <h3 className="text-sm font-medium text-zinc-200">
@@ -136,14 +112,9 @@ export function TokenBudgetPanel({ budget }: TokenBudgetPanelProps) {
                 {budget.warnings.map((warning) => (
                   <li
                     key={warning.id}
-                    className={`rounded-lg border px-3 py-2 text-sm leading-6 ${warningStyles(
-                      warning.level,
-                    )}`}
+                    className="flex flex-wrap items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm leading-6 text-zinc-300"
                   >
-                    <span className="font-medium capitalize">
-                      {warning.level}
-                    </span>
-                    <span className="text-zinc-500"> · </span>
+                    <StatusBadge tone={warning.level}>{warning.level}</StatusBadge>
                     {warning.message}
                   </li>
                 ))}
@@ -154,8 +125,8 @@ export function TokenBudgetPanel({ budget }: TokenBudgetPanelProps) {
               </p>
             )}
           </section>
-        </div>
+        </>
       )}
-    </div>
+    </Panel>
   );
 }
