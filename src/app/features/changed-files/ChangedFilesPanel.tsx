@@ -1,4 +1,7 @@
+import { FileDiff } from "lucide-react";
+
 import type { ChangedFile } from "../../lib/repo";
+import { ActionButton, EmptyState, Panel } from "../../ui";
 
 type ChangedFilesPanelProps = {
   files: ChangedFile[];
@@ -64,31 +67,25 @@ export function ChangedFilesPanel({
   onRefresh,
 }: ChangedFilesPanelProps) {
   return (
-    <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <h2 className="text-lg font-medium">Changed files</h2>
-          <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs font-medium text-zinc-400">
-            {files.length} {files.length === 1 ? "file" : "files"}
-          </span>
-        </div>
-
-        <button
-          type="button"
-          onClick={onRefresh}
-          disabled={isLoading}
-          className="w-fit rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm font-medium text-zinc-100 transition hover:border-zinc-500 hover:bg-zinc-900 disabled:cursor-not-allowed disabled:text-zinc-500"
-        >
-          {isLoading ? "Refreshing..." : "Refresh changed files"}
-        </button>
-      </div>
-
+    <Panel
+      title="Changed files"
+      icon={<FileDiff className="h-5 w-5" />}
+      status={{
+        tone: "idle",
+        label: `${files.length} ${files.length === 1 ? "file" : "files"}`,
+      }}
+      actions={
+        <ActionButton variant="secondary" onClick={onRefresh} disabled={isLoading}>
+          {isLoading ? "Refreshing..." : "Refresh"}
+        </ActionButton>
+      }
+    >
       {isLoading && (
-        <p className="mt-3 text-sm text-zinc-400">Loading changed files...</p>
+        <p className="text-sm text-zinc-400">Loading changed files...</p>
       )}
 
       {error && (
-        <div className="mt-4 rounded-lg border border-red-900/70 bg-red-950/30 p-4">
+        <div className="rounded-lg border border-red-900/70 bg-red-950/30 p-4">
           <p className="text-sm font-medium text-red-200">
             Changed files unavailable
           </p>
@@ -97,13 +94,15 @@ export function ChangedFilesPanel({
       )}
 
       {!isLoading && !error && files.length === 0 && (
-        <p className="mt-3 text-sm text-zinc-500">
-          No changed files in this repository.
-        </p>
+        <EmptyState
+          icon={<FileDiff className="h-5 w-5" />}
+          title="No changed files"
+          description="This repository has no changed files to review."
+        />
       )}
 
       {!isLoading && !error && files.length > 0 && (
-        <ul className="mt-5 divide-y divide-zinc-800 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
+        <ul className="divide-y divide-zinc-800 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
           {files.map((file) => {
             const indicators = fileIndicators(file);
             const showOldPath =
@@ -116,8 +115,10 @@ export function ChangedFilesPanel({
                 <button
                   type="button"
                   onClick={() => onSelectFile(file)}
-                  className={`w-full p-4 text-left transition hover:bg-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 ${
-                    isSelected ? "bg-zinc-900 ring-1 ring-inset ring-zinc-600" : ""
+                  className={`w-full border-l-2 p-4 text-left transition hover:bg-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 ${
+                    isSelected
+                      ? "border-zinc-100 bg-zinc-900"
+                      : "border-transparent"
                   }`}
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -158,6 +159,6 @@ export function ChangedFilesPanel({
           })}
         </ul>
       )}
-    </div>
+    </Panel>
   );
 }

@@ -1,3 +1,5 @@
+import { ClipboardCheck } from "lucide-react";
+
 import type {
   AvailableCommand,
   ChangedFile,
@@ -10,6 +12,7 @@ import {
   changedFileStatuses,
   type ScreeningFinding,
 } from "../../lib/screening";
+import { EmptyState, MetricPill, Panel, StatusBadge, type StatusTone } from "../../ui";
 
 type PreStageScreeningPanelProps = {
   repoSummary: RepoSummary | null;
@@ -48,18 +51,12 @@ const sourceLabels: Record<ScreeningFinding["source"], string> = {
 const findingLevels = ["fail", "warning", "info", "pass"] as const satisfies
   readonly ScreeningFinding["level"][];
 
-function levelClassName(level: ScreeningFinding["level"]) {
-  switch (level) {
-    case "pass":
-      return "border-emerald-900/70 bg-emerald-950/40 text-emerald-200";
-    case "info":
-      return "border-sky-900/70 bg-sky-950/40 text-sky-200";
-    case "warning":
-      return "border-amber-900/70 bg-amber-950/40 text-amber-200";
-    case "fail":
-      return "border-red-900/70 bg-red-950/40 text-red-200";
-  }
-}
+const levelTone: Record<ScreeningFinding["level"], StatusTone> = {
+  pass: "pass",
+  info: "info",
+  warning: "warning",
+  fail: "fail",
+};
 
 export function PreStageScreeningPanel({
   repoSummary,
@@ -88,31 +85,22 @@ export function PreStageScreeningPanel({
   ).length;
 
   return (
-    <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="text-lg font-medium">Pre-Stage Screening</h2>
-          <p className="mt-2 text-sm leading-6 text-zinc-500">
-            Deterministic local checks only. No AI review yet.
-          </p>
-        </div>
-
-        {isValidRepo && (
-          <span className="w-fit rounded-full border border-zinc-700 bg-zinc-950 px-3 py-1 text-xs font-medium text-zinc-300">
-            Read-only
-          </span>
-        )}
-      </div>
-
+    <Panel
+      title="Pre-Stage Screening"
+      icon={<ClipboardCheck className="h-5 w-5" />}
+      description="Deterministic local checks only. No AI review yet."
+      status={isValidRepo ? { tone: "preview", label: "Read-only" } : undefined}
+    >
       {!isValidRepo && (
-        <p className="mt-4 text-sm text-zinc-500">
-          Select a valid Git repository to see the local pre-stage screening
-          summary.
-        </p>
+        <EmptyState
+          icon={<ClipboardCheck className="h-5 w-5" />}
+          title="No valid repository selected"
+          description="Select a valid Git repository to see the local pre-stage screening summary."
+        />
       )}
 
       {isValidRepo && repoSummary && (
-        <div className="mt-6 space-y-6">
+        <>
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
               <p className="text-sm text-zinc-500">Repo</p>
@@ -141,27 +129,21 @@ export function PreStageScreeningPanel({
               <h3 className="text-sm font-medium text-zinc-200">
                 Changed-file count
               </h3>
-              <span className="rounded-full border border-zinc-700 bg-zinc-950 px-3 py-1 text-xs font-medium text-zinc-300">
+              <span className="text-xs text-zinc-500">
                 {changedFiles.length}{" "}
                 {changedFiles.length === 1 ? "file" : "files"}
               </span>
             </div>
 
-            <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+            <div className="mt-3 flex flex-wrap gap-2">
               {changedFileStatuses.map((status) => (
-                <div
+                <MetricPill
                   key={status}
-                  className="rounded-lg border border-zinc-800 bg-zinc-950 p-3"
-                >
-                  <dt className="text-xs text-zinc-500">
-                    {statusLabels[status]}
-                  </dt>
-                  <dd className="mt-1 text-lg font-semibold text-zinc-100">
-                    {statusCounts[status]}
-                  </dd>
-                </div>
+                  label={statusLabels[status]}
+                  value={statusCounts[status]}
+                />
               ))}
-            </dl>
+            </div>
           </div>
 
           <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4">
@@ -169,36 +151,42 @@ export function PreStageScreeningPanel({
               Command runner summary
             </h3>
 
-            <dl className="mt-3 grid gap-3 sm:grid-cols-3">
-              <div>
-                <dt className="text-xs text-zinc-500">Supported commands</dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-100">
-                  {isLoadingCommands
+            <div className="mt-3 flex flex-wrap gap-2">
+              <MetricPill
+                label="Supported commands"
+                value={
+                  isLoadingCommands
                     ? "Checking..."
-                    : `${availableCommandCount} of ${availableCommands.length}`}
-                </dd>
-              </div>
+                    : `${availableCommandCount} of ${availableCommands.length}`
+                }
+              />
 
-              <div>
-                <dt className="text-xs text-zinc-500">Latest run</dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-100">
-                  {isCommandRunning
+              <MetricPill
+                label="Latest run"
+                value={
+                  isCommandRunning
                     ? "Running"
                     : latestCommandResult
                       ? latestCommandResult.success
                         ? "Succeeded"
                         : "Failed"
-                      : "Not run"}
-                </dd>
-              </div>
+                      : "Not run"
+                }
+                tone={
+                  latestCommandResult
+                    ? latestCommandResult.success
+                      ? "pass"
+                      : "fail"
+                    : "idle"
+                }
+              />
+            </div>
 
-              <div>
-                <dt className="text-xs text-zinc-500">App-level error</dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-100">
-                  {commandError ?? commandAvailabilityError ?? "None"}
-                </dd>
-              </div>
-            </dl>
+            {(commandError ?? commandAvailabilityError) && (
+              <p className="mt-3 text-sm leading-6 text-red-200">
+                {commandError ?? commandAvailabilityError}
+              </p>
+            )}
           </div>
 
           <div>
@@ -217,13 +205,9 @@ export function PreStageScreeningPanel({
                 return (
                   <section key={level}>
                     <div className="mb-2 flex items-center gap-2">
-                      <span
-                        className={`rounded-full border px-2.5 py-1 text-xs font-medium ${levelClassName(
-                          level,
-                        )}`}
-                      >
+                      <StatusBadge tone={levelTone[level]}>
                         {levelLabels[level]}
-                      </span>
+                      </StatusBadge>
                       <span className="text-xs text-zinc-500">
                         {levelFindings.length}
                       </span>
@@ -257,8 +241,8 @@ export function PreStageScreeningPanel({
               })}
             </div>
           </div>
-        </div>
+        </>
       )}
-    </div>
+    </Panel>
   );
 }

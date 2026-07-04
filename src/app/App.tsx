@@ -1,4 +1,13 @@
 import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ClipboardCheck,
+  FolderGit2,
+  GitBranch,
+  GitCompare,
+  XCircle,
+} from "lucide-react";
 
 import { ChangedFilesPanel } from "./features/changed-files/ChangedFilesPanel";
 import {
@@ -26,7 +35,15 @@ import { buildLocalStageReportPreview } from "./lib/stageReport";
 import { buildStagePayload } from "./lib/stagePayload";
 import { buildStagingGroundReadiness } from "./lib/stagingGround";
 import { buildTokenBudget } from "./lib/tokenBudget";
-import { AppShell, MetricPill, StatusBadge, type StatusTone } from "./ui";
+import {
+  AppShell,
+  EmptyState,
+  MetricPill,
+  Panel,
+  SectionHeader,
+  StatusBadge,
+  type StatusTone,
+} from "./ui";
 
 function errorMessage(error: unknown, fallback: string) {
   if (error instanceof Error) {
@@ -389,24 +406,42 @@ export default function App() {
         </>
       }
     >
+      <SectionHeader
+        title="Repository and changes"
+        icon={<FolderGit2 className="h-4 w-4" />}
+      />
+
       <RepoPicker selectedPath={selectedPath} onSelectPath={handleSelectPath} />
 
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
-        <h2 className="text-lg font-medium">Repository inspection</h2>
-
+      <Panel
+        title="Repository inspection"
+        icon={<GitBranch className="h-5 w-5" />}
+        status={
+          selectedPath
+            ? { tone: repoStatus.tone, label: repoStatus.label }
+            : undefined
+        }
+      >
         {!selectedPath && (
-          <p className="mt-3 text-sm text-zinc-500">No folder selected yet.</p>
+          <EmptyState
+            icon={<GitBranch className="h-5 w-5" />}
+            title="No repository selected"
+            description="Select a local Git repository above to begin inspection."
+          />
         )}
 
         {selectedPath && isInspecting && (
-          <p className="mt-3 text-sm text-zinc-400">Inspecting repository...</p>
+          <p className="text-sm text-zinc-400">Inspecting repository...</p>
         )}
 
         {inspectionError && (
-          <div className="mt-4 rounded-lg border border-red-900/70 bg-red-950/30 p-4">
-            <p className="text-sm font-medium text-red-200">
-              Repository inspection failed
-            </p>
+          <div className="rounded-lg border border-red-900/70 bg-red-950/30 p-4">
+            <div className="flex items-center gap-2">
+              <XCircle className="h-4 w-4 text-red-200" />
+              <p className="text-sm font-medium text-red-200">
+                Repository inspection failed
+              </p>
+            </div>
             <p className="mt-2 text-sm leading-6 text-red-100/80">
               {inspectionError}
             </p>
@@ -414,7 +449,7 @@ export default function App() {
         )}
 
         {repoSummary && (
-          <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+          <dl className="grid gap-4 sm:grid-cols-2">
             <div>
               <dt className="text-sm text-zinc-500">Repo name</dt>
               <dd className="mt-1 text-sm font-medium text-zinc-100">
@@ -424,14 +459,20 @@ export default function App() {
 
             <div>
               <dt className="text-sm text-zinc-500">Current branch</dt>
-              <dd className="mt-1 text-sm font-medium text-zinc-100">
+              <dd className="mt-1 flex items-center gap-1.5 text-sm font-medium text-zinc-100">
+                <GitBranch className="h-3.5 w-3.5 text-zinc-500" />
                 {repoSummary.current_branch ?? "Detached HEAD / unknown"}
               </dd>
             </div>
 
             <div>
               <dt className="text-sm text-zinc-500">Git repository status</dt>
-              <dd className="mt-1 text-sm font-medium text-zinc-100">
+              <dd className="mt-1 flex items-center gap-1.5 text-sm font-medium text-zinc-100">
+                {repoSummary.is_git_repo ? (
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                ) : (
+                  <XCircle className="h-3.5 w-3.5 text-red-400" />
+                )}
                 {repoSummary.is_git_repo
                   ? "Valid Git repository"
                   : "Not a Git repository"}
@@ -440,7 +481,12 @@ export default function App() {
 
             <div>
               <dt className="text-sm text-zinc-500">Working tree state</dt>
-              <dd className="mt-1 text-sm font-medium text-zinc-100">
+              <dd className="mt-1 flex items-center gap-1.5 text-sm font-medium text-zinc-100">
+                {repoSummary.has_uncommitted_changes ? (
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+                ) : (
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                )}
                 {repoSummary.has_uncommitted_changes ? "Dirty" : "Clean"}
               </dd>
             </div>
@@ -453,17 +499,24 @@ export default function App() {
             </div>
           </dl>
         )}
-      </div>
+      </Panel>
+
+      {repoSummary && (
+        <ChangedFilesPanel
+          files={changedFiles}
+          error={changedFilesError}
+          isLoading={isLoadingChangedFiles}
+          selectedFilePath={selectedChangedFile?.file_path ?? null}
+          onSelectFile={handleSelectChangedFile}
+          onRefresh={handleRefreshChangedFiles}
+        />
+      )}
 
       {repoSummary && (
         <>
-          <ChangedFilesPanel
-            files={changedFiles}
-            error={changedFilesError}
-            isLoading={isLoadingChangedFiles}
-            selectedFilePath={selectedChangedFile?.file_path ?? null}
-            onSelectFile={handleSelectChangedFile}
-            onRefresh={handleRefreshChangedFiles}
+          <SectionHeader
+            title="Diff and local checks"
+            icon={<GitCompare className="h-4 w-4" />}
           />
 
           <DiffViewerPanel
@@ -481,6 +534,11 @@ export default function App() {
           )}
         </>
       )}
+
+      <SectionHeader
+        title="Deterministic screening"
+        icon={<ClipboardCheck className="h-4 w-4" />}
+      />
 
       <PreStageScreeningPanel
         repoSummary={repoSummary}

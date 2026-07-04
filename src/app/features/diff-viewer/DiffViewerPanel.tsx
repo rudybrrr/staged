@@ -1,4 +1,7 @@
+import { GitCompare } from "lucide-react";
+
 import type { ChangedFile } from "../../lib/repo";
+import { CodeBlock, EmptyState, Panel } from "../../ui";
 
 type DiffViewerPanelProps = {
   selectedFile: ChangedFile | null;
@@ -14,50 +17,53 @@ export function DiffViewerPanel({
   isLoading,
 }: DiffViewerPanelProps) {
   return (
-    <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
-      <h2 className="text-lg font-medium">Diff viewer</h2>
-
+    <Panel
+      title="Diff viewer"
+      icon={<GitCompare className="h-5 w-5" />}
+      description="Local, read-only diff output."
+    >
       {!selectedFile && (
-        <p className="mt-3 text-sm text-zinc-500">
-          Select a changed file to view its diff.
-        </p>
+        <EmptyState
+          icon={<GitCompare className="h-5 w-5" />}
+          title="No file selected"
+          description="Select a changed file above to view its diff."
+        />
       )}
 
       {selectedFile && (
-        <div className="mt-4">
-          <p className="text-sm text-zinc-500">Selected file</p>
-          <p className="mt-1 break-all rounded-lg border border-zinc-800 bg-zinc-950 p-3 font-mono text-sm text-zinc-200">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            Selected file
+          </p>
+          <p className="mt-2 break-all rounded-lg border border-zinc-800 bg-zinc-950 p-3 font-mono text-sm text-zinc-200">
             {selectedFile.file_path}
           </p>
         </div>
       )}
 
       {selectedFile && isLoading && (
-        <p className="mt-4 text-sm text-zinc-400">Loading diff...</p>
+        <p className="text-sm text-zinc-400">Loading diff...</p>
       )}
 
       {selectedFile && error && (
-        <div className="mt-4 rounded-lg border border-red-900/70 bg-red-950/30 p-4">
+        <div className="rounded-lg border border-red-900/70 bg-red-950/30 p-4">
           <p className="text-sm font-medium text-red-200">Diff unavailable</p>
           <p className="mt-2 text-sm leading-6 text-red-100/80">{error}</p>
         </div>
       )}
 
       {selectedFile && !isLoading && !error && diffText === "" && (
-        <p className="mt-4 text-sm leading-6 text-zinc-500">
-          No diff available for this file yet. Untracked files may not have Git
-          diff output until staged.
-        </p>
+        <EmptyState
+          title="No diff available"
+          description="Untracked files may not have Git diff output until staged."
+        />
       )}
 
       {selectedFile &&
         !isLoading &&
         !error &&
         diffText !== null &&
-        diffText !== "" && (
-          <pre className="mt-4 max-h-[32rem] overflow-auto rounded-lg border border-zinc-800 bg-zinc-950 p-4 text-sm leading-6 text-zinc-200">{diffText}</pre>
-        )}
-    </div>
+        diffText !== "" && <CodeBlock>{diffText}</CodeBlock>}
+    </Panel>
   );
 }
-

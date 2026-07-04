@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import { FolderOpen } from "lucide-react";
+
+import { ActionButton, EmptyState, Panel } from "../../ui";
 
 type RepoPickerProps = {
   selectedPath: string | null;
@@ -30,33 +33,35 @@ export function RepoPicker({ selectedPath, onSelectPath }: RepoPickerProps) {
   }
 
   return (
-    <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
-      <h2 className="text-lg font-medium">Choose a repository folder</h2>
-
-      <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">
-        Select a local Git repository for Staged to inspect. Repository details
-        and changed files will load after selection.
-      </p>
-
-      <button
-        type="button"
-        onClick={handleSelectFolder}
-        disabled={isPicking}
-        className="mt-5 rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-2 text-sm font-medium text-zinc-100 transition hover:border-zinc-500 hover:bg-zinc-900 disabled:cursor-not-allowed disabled:text-zinc-500"
-      >
-        Select folder
-      </button>
-
+    <Panel
+      title="Choose a repository folder"
+      description="Select a local Git repository for Staged to inspect. Repository details and changed files will load after selection."
+      icon={<FolderOpen className="h-5 w-5" />}
+      actions={
+        <ActionButton
+          variant="secondary"
+          onClick={handleSelectFolder}
+          disabled={isPicking}
+        >
+          <FolderOpen className="h-4 w-4" />
+          {isPicking ? "Selecting..." : "Select folder"}
+        </ActionButton>
+      }
+    >
       {selectedPath ? (
-        <div className="mt-5">
+        <div>
           <p className="text-sm font-medium text-zinc-300">Selected path</p>
           <code className="mt-2 block overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-950 p-3 font-mono text-sm text-zinc-200">
             {selectedPath}
           </code>
         </div>
       ) : (
-        <p className="mt-5 text-sm text-zinc-500">No folder selected yet.</p>
+        <EmptyState
+          icon={<FolderOpen className="h-5 w-5" />}
+          title="No folder selected yet"
+          description="Choose a folder above to begin."
+        />
       )}
-    </div>
+    </Panel>
   );
 }
