@@ -26,13 +26,7 @@ import { buildLocalStageReportPreview } from "./lib/stageReport";
 import { buildStagePayload } from "./lib/stagePayload";
 import { buildStagingGroundReadiness } from "./lib/stagingGround";
 import { buildTokenBudget } from "./lib/tokenBudget";
-
-const milestoneItems = [
-  "Inspect local Git repositories",
-  "Read current branch and working tree state",
-  "List changed files with status metadata",
-  "Display selected file diffs read-only",
-];
+import { AppShell, MetricPill, StatusBadge, type StatusTone } from "./ui";
 
 function errorMessage(error: unknown, fallback: string) {
   if (error instanceof Error) {
@@ -285,155 +279,219 @@ export default function App() {
     }
   }
 
-  return (
-    <main className="min-h-screen bg-zinc-950 px-8 py-10 text-zinc-100">
-      <section className="mx-auto max-w-4xl">
-        <p className="text-sm font-medium uppercase tracking-[0.25em] text-zinc-500">
+  let repoStatus: { tone: StatusTone; label: string } = {
+    tone: "idle",
+    label: "No repo selected",
+  };
+
+  if (inspectionError) {
+    repoStatus = { tone: "fail", label: "Invalid repo" };
+  } else if (selectedPath && isInspecting) {
+    repoStatus = { tone: "idle", label: "Inspecting…" };
+  } else if (repoSummary) {
+    if (!repoSummary.is_git_repo) {
+      repoStatus = { tone: "fail", label: "Not a Git repository" };
+    } else if (repoSummary.has_uncommitted_changes) {
+      repoStatus = { tone: "info", label: "Dirty" };
+    } else {
+      repoStatus = { tone: "pass", label: "Clean" };
+    }
+  }
+
+  const safetyGateStatus =
+    safetyGateResult &&
+    (
+      {
+        pass: { tone: "pass", label: "Safety Gate: Pass" },
+        warning: { tone: "warning", label: "Safety Gate: Warning" },
+        blocked: { tone: "blocked", label: "Safety Gate: Blocked" },
+      } satisfies Record<string, { tone: StatusTone; label: string }>
+    )[safetyGateResult.status];
+
+  const header = (
+    <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-6 py-4">
+      <div className="flex items-baseline gap-3">
+        <span className="text-base font-semibold tracking-tight text-zinc-100">
           Staged
-        </p>
+        </span>
+        <span className="hidden text-xs text-zinc-500 sm:inline">
+          Local-first verification before commit
+        </span>
+        <StatusBadge tone="preview">Local preview</StatusBadge>
+      </div>
 
-        <h1 className="mt-4 text-4xl font-semibold tracking-tight">
-          Local-first verification before commit.
-        </h1>
-
-        <p className="mt-4 max-w-2xl text-base leading-7 text-zinc-400">
-          Milestone 3 focuses on read-only diff review: selecting a repository,
-          reading its current changed files, and opening a unified diff for one
-          file at a time. No staging actions, editing, AI, or cloud.
-        </p>
-
-        <RepoPicker selectedPath={selectedPath} onSelectPath={handleSelectPath} />
-
-        <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
-          <h2 className="text-lg font-medium">Repository inspection</h2>
-
-          {!selectedPath && (
-            <p className="mt-3 text-sm text-zinc-500">No folder selected yet.</p>
-          )}
-
-          {selectedPath && isInspecting && (
-            <p className="mt-3 text-sm text-zinc-400">
-              Inspecting repository...
-            </p>
-          )}
-
-          {inspectionError && (
-            <div className="mt-4 rounded-lg border border-red-900/70 bg-red-950/30 p-4">
-              <p className="text-sm font-medium text-red-200">
-                Repository inspection failed
-              </p>
-              <p className="mt-2 text-sm leading-6 text-red-100/80">
-                {inspectionError}
-              </p>
-            </div>
-          )}
-
-          {repoSummary && (
-            <dl className="mt-5 grid gap-4 sm:grid-cols-2">
-              <div>
-                <dt className="text-sm text-zinc-500">Repo name</dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-100">
-                  {repoSummary.repo_name}
-                </dd>
-              </div>
-
-              <div>
-                <dt className="text-sm text-zinc-500">Current branch</dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-100">
-                  {repoSummary.current_branch ?? "Detached HEAD / unknown"}
-                </dd>
-              </div>
-
-              <div>
-                <dt className="text-sm text-zinc-500">Git repository status</dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-100">
-                  {repoSummary.is_git_repo
-                    ? "Valid Git repository"
-                    : "Not a Git repository"}
-                </dd>
-              </div>
-
-              <div>
-                <dt className="text-sm text-zinc-500">Working tree state</dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-100">
-                  {repoSummary.has_uncommitted_changes ? "Dirty" : "Clean"}
-                </dd>
-              </div>
-
-              <div className="sm:col-span-2">
-                <dt className="text-sm text-zinc-500">Repo path</dt>
-                <dd className="mt-1 overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-950 p-3 font-mono text-sm text-zinc-200">
-                  {repoSummary.repo_path}
-                </dd>
-              </div>
-            </dl>
-          )}
-        </div>
-
-        <PreStageScreeningPanel
-          repoSummary={repoSummary}
-          changedFiles={changedFiles}
-          availableCommands={commandRunnerState.availableCommands}
-          latestCommandResult={commandRunnerState.latestCommandResult}
-          commandError={commandRunnerState.error}
-          commandAvailabilityError={commandRunnerState.availabilityError}
-          isCommandRunning={commandRunnerState.isRunning}
-          isLoadingCommands={commandRunnerState.isLoadingCommands}
-        />
-
-        <StagePayloadPreviewPanel payload={stagePayload} />
-
-        <TokenBudgetPanel budget={tokenBudget} />
-
-        <SafetyGatePanel result={safetyGateResult} />
-
-        <StagingGroundPanel
-          hasValidRepo={repoSummary?.is_git_repo ?? false}
-          readiness={stagingGroundReadiness}
-        />
-
-        <StageReportPanel report={stageReport} />
-
+      <div className="flex flex-wrap items-center gap-2">
         {repoSummary && (
           <>
-            <ChangedFilesPanel
-              files={changedFiles}
-              error={changedFilesError}
-              isLoading={isLoadingChangedFiles}
-              selectedFilePath={selectedChangedFile?.file_path ?? null}
-              onSelectFile={handleSelectChangedFile}
-              onRefresh={handleRefreshChangedFiles}
-            />
-
-            <DiffViewerPanel
-              selectedFile={selectedChangedFile}
-              diffText={diffText}
-              error={diffError}
-              isLoading={isLoadingDiff}
-            />
-
-            {repoSummary.is_git_repo && (
-              <CommandRunnerPanel
-                repoPath={repoSummary.repo_path}
-                onStateChange={handleCommandRunnerStateChange}
-              />
+            <span className="text-xs font-medium text-zinc-300">
+              {repoSummary.repo_name}
+            </span>
+            <span
+              className="max-w-[220px] truncate font-mono text-xs text-zinc-500"
+              title={repoSummary.repo_path}
+            >
+              {repoSummary.repo_path}
+            </span>
+            {repoSummary.current_branch && (
+              <MetricPill label="Branch" value={repoSummary.current_branch} />
             )}
           </>
         )}
 
-        <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
-          <h2 className="text-lg font-medium">Current milestone target</h2>
+        <StatusBadge tone={repoStatus.tone}>{repoStatus.label}</StatusBadge>
 
-          <ul className="mt-4 space-y-3">
-            {milestoneItems.map((item) => (
-              <li key={item} className="flex items-center gap-3 text-zinc-300">
-                <span className="h-2 w-2 rounded-full bg-zinc-500" />
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-    </main>
+        {repoSummary && (
+          <MetricPill
+            label="Changed"
+            value={changedFiles.length}
+            tone={changedFiles.length > 0 ? "info" : "idle"}
+          />
+        )}
+
+        {safetyGateStatus && (
+          <StatusBadge tone={safetyGateStatus.tone}>
+            {safetyGateStatus.label}
+          </StatusBadge>
+        )}
+
+        {tokenBudget && (
+          <MetricPill
+            label="Tokens"
+            value={tokenBudget.estimated_tokens.toLocaleString()}
+            tone={
+              tokenBudget.warnings.some((warning) => warning.level === "warning")
+                ? "warning"
+                : "idle"
+            }
+          />
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <AppShell
+      header={header}
+      rail={
+        <>
+          <StagePayloadPreviewPanel payload={stagePayload} />
+
+          <TokenBudgetPanel budget={tokenBudget} />
+
+          <StagingGroundPanel
+            hasValidRepo={repoSummary?.is_git_repo ?? false}
+            readiness={stagingGroundReadiness}
+          />
+
+          <SafetyGatePanel result={safetyGateResult} />
+
+          <StageReportPanel report={stageReport} />
+        </>
+      }
+    >
+      <RepoPicker selectedPath={selectedPath} onSelectPath={handleSelectPath} />
+
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
+        <h2 className="text-lg font-medium">Repository inspection</h2>
+
+        {!selectedPath && (
+          <p className="mt-3 text-sm text-zinc-500">No folder selected yet.</p>
+        )}
+
+        {selectedPath && isInspecting && (
+          <p className="mt-3 text-sm text-zinc-400">Inspecting repository...</p>
+        )}
+
+        {inspectionError && (
+          <div className="mt-4 rounded-lg border border-red-900/70 bg-red-950/30 p-4">
+            <p className="text-sm font-medium text-red-200">
+              Repository inspection failed
+            </p>
+            <p className="mt-2 text-sm leading-6 text-red-100/80">
+              {inspectionError}
+            </p>
+          </div>
+        )}
+
+        {repoSummary && (
+          <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div>
+              <dt className="text-sm text-zinc-500">Repo name</dt>
+              <dd className="mt-1 text-sm font-medium text-zinc-100">
+                {repoSummary.repo_name}
+              </dd>
+            </div>
+
+            <div>
+              <dt className="text-sm text-zinc-500">Current branch</dt>
+              <dd className="mt-1 text-sm font-medium text-zinc-100">
+                {repoSummary.current_branch ?? "Detached HEAD / unknown"}
+              </dd>
+            </div>
+
+            <div>
+              <dt className="text-sm text-zinc-500">Git repository status</dt>
+              <dd className="mt-1 text-sm font-medium text-zinc-100">
+                {repoSummary.is_git_repo
+                  ? "Valid Git repository"
+                  : "Not a Git repository"}
+              </dd>
+            </div>
+
+            <div>
+              <dt className="text-sm text-zinc-500">Working tree state</dt>
+              <dd className="mt-1 text-sm font-medium text-zinc-100">
+                {repoSummary.has_uncommitted_changes ? "Dirty" : "Clean"}
+              </dd>
+            </div>
+
+            <div className="sm:col-span-2">
+              <dt className="text-sm text-zinc-500">Repo path</dt>
+              <dd className="mt-1 overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-950 p-3 font-mono text-sm text-zinc-200">
+                {repoSummary.repo_path}
+              </dd>
+            </div>
+          </dl>
+        )}
+      </div>
+
+      {repoSummary && (
+        <>
+          <ChangedFilesPanel
+            files={changedFiles}
+            error={changedFilesError}
+            isLoading={isLoadingChangedFiles}
+            selectedFilePath={selectedChangedFile?.file_path ?? null}
+            onSelectFile={handleSelectChangedFile}
+            onRefresh={handleRefreshChangedFiles}
+          />
+
+          <DiffViewerPanel
+            selectedFile={selectedChangedFile}
+            diffText={diffText}
+            error={diffError}
+            isLoading={isLoadingDiff}
+          />
+
+          {repoSummary.is_git_repo && (
+            <CommandRunnerPanel
+              repoPath={repoSummary.repo_path}
+              onStateChange={handleCommandRunnerStateChange}
+            />
+          )}
+        </>
+      )}
+
+      <PreStageScreeningPanel
+        repoSummary={repoSummary}
+        changedFiles={changedFiles}
+        availableCommands={commandRunnerState.availableCommands}
+        latestCommandResult={commandRunnerState.latestCommandResult}
+        commandError={commandRunnerState.error}
+        commandAvailabilityError={commandRunnerState.availabilityError}
+        isCommandRunning={commandRunnerState.isRunning}
+        isLoadingCommands={commandRunnerState.isLoadingCommands}
+      />
+    </AppShell>
   );
 }

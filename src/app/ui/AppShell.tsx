@@ -15,9 +15,9 @@ export function AppShell({ header, children, rail, className = "" }: AppShellPro
           {header}
         </header>
       ) : null}
-      <div className="mx-auto flex max-w-7xl gap-8 px-6 py-8">
-        <div className="min-w-0 flex-1 space-y-8">{children}</div>
-        {rail ? <div className="hidden w-full max-w-sm shrink-0 space-y-8 lg:block">{rail}</div> : null}
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-6 py-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="min-w-0 space-y-8">{children}</div>
+        {rail ? <div className="min-w-0 space-y-8">{rail}</div> : null}
       </div>
     </div>
   );
