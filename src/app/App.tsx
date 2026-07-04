@@ -40,8 +40,10 @@ import {
   EmptyState,
   MetricPill,
   Panel,
+  PipelineStrip,
   SectionHeader,
   StatusBadge,
+  type PipelineStep,
   type StatusTone,
 } from "./ui";
 
@@ -171,6 +173,79 @@ export default function App() {
       }),
     [safetyGateResult, stagePayload, stagingGroundReadiness, tokenBudget],
   );
+
+  const pipelineSteps: PipelineStep[] = useMemo(() => {
+    const payloadStep: PipelineStep = stagePayload
+      ? { id: "payload", label: "Payload", tone: "pass", detail: "Ready" }
+      : { id: "payload", label: "Payload", tone: "idle", detail: "No payload" };
+
+    const hasScreenableRepo = repoSummary?.is_git_repo ?? false;
+    let screeningStep: PipelineStep;
+    if (!hasScreenableRepo || screeningFindings.length === 0) {
+      screeningStep = { id: "screening", label: "Screening", tone: "idle", detail: "Idle" };
+    } else if (screeningFindings.some((finding) => finding.level === "fail")) {
+      screeningStep = {
+        id: "screening",
+        label: "Screening",
+        tone: "blocked",
+        detail: `${screeningFindings.length} findings`,
+      };
+    } else if (screeningFindings.some((finding) => finding.level === "warning")) {
+      screeningStep = {
+        id: "screening",
+        label: "Screening",
+        tone: "warning",
+        detail: `${screeningFindings.length} findings`,
+      };
+    } else {
+      screeningStep = { id: "screening", label: "Screening", tone: "pass", detail: "Pass" };
+    }
+
+    let safetyGateStep: PipelineStep;
+    if (!safetyGateResult) {
+      safetyGateStep = { id: "safety-gate", label: "Safety Gate", tone: "idle", detail: "Idle" };
+    } else if (safetyGateResult.status === "pass") {
+      safetyGateStep = { id: "safety-gate", label: "Safety Gate", tone: "pass", detail: "Pass" };
+    } else if (safetyGateResult.status === "warning") {
+      safetyGateStep = { id: "safety-gate", label: "Safety Gate", tone: "warning", detail: "Warning" };
+    } else {
+      safetyGateStep = { id: "safety-gate", label: "Safety Gate", tone: "blocked", detail: "Blocked" };
+    }
+
+    let reportStep: PipelineStep;
+    if (!stageReport) {
+      reportStep = { id: "report", label: "Report", tone: "idle", detail: "Idle" };
+    } else if (stageReport.report_status === "preview_only") {
+      reportStep = { id: "report", label: "Report", tone: "preview", detail: "Preview" };
+    } else if (stageReport.recommendation.decision === "do_not_submit") {
+      reportStep = { id: "report", label: "Report", tone: "blocked", detail: "Do not submit" };
+    } else if (stageReport.recommendation.decision === "review_manually") {
+      reportStep = { id: "report", label: "Report", tone: "warning", detail: "Review manually" };
+    } else {
+      reportStep = { id: "report", label: "Report", tone: "pass", detail: "Ready" };
+    }
+
+    let stagingGroundStep: PipelineStep;
+    if (stagingGroundReadiness.status === "not_ready") {
+      stagingGroundStep = { id: "staging-ground", label: "Staging Ground", tone: "idle", detail: "Idle" };
+    } else if (stagingGroundReadiness.status === "review_only") {
+      stagingGroundStep =
+        stagingGroundReadiness.safety_gate_status === "blocked"
+          ? { id: "staging-ground", label: "Staging Ground", tone: "warning", detail: "Review only" }
+          : { id: "staging-ground", label: "Staging Ground", tone: "preview", detail: "Review only" };
+    } else {
+      stagingGroundStep = { id: "staging-ground", label: "Staging Ground", tone: "pass", detail: "Ready" };
+    }
+
+    return [payloadStep, screeningStep, safetyGateStep, reportStep, stagingGroundStep];
+  }, [
+    repoSummary,
+    screeningFindings,
+    safetyGateResult,
+    stagePayload,
+    stageReport,
+    stagingGroundReadiness,
+  ]);
 
   function clearSelectedDiff() {
     diffRequestId.current += 1;
@@ -389,6 +464,7 @@ export default function App() {
   return (
     <AppShell
       header={header}
+      pipeline={<PipelineStrip steps={pipelineSteps} />}
       rail={
         <>
           <StagePayloadPreviewPanel payload={stagePayload} />

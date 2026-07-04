@@ -21,3 +21,6 @@ export type { CodeBlockProps } from "./CodeBlock";
 
 export { MetricPill, Metric } from "./MetricPill";
 export type { MetricPillProps, MetricProps } from "./MetricPill";
+
+export { PipelineStrip } from "./PipelineStrip";
+export type { PipelineStep, PipelineStripProps } from "./PipelineStrip";
