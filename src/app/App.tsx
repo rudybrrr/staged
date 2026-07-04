@@ -31,7 +31,6 @@ import { buildStagingGroundReadiness } from "./lib/stagingGround";
 import { buildTokenBudget } from "./lib/tokenBudget";
 import {
   AppShell,
-  EmptyState,
   MetricPill,
   Panel,
   PipelineStrip,
@@ -479,88 +478,78 @@ export default function App() {
 
         <RepoPicker selectedPath={selectedPath} onSelectPath={handleSelectPath} />
 
-        <Panel
-          title="Repository inspection"
-          icon={<GitBranch className="h-5 w-5" />}
-          status={
-            selectedPath
-              ? { tone: repoStatus.tone, label: repoStatus.label }
-              : undefined
-          }
-        >
-          {!selectedPath && (
-            <EmptyState
-              icon={<GitBranch className="h-5 w-5" />}
-              title="No repository selected"
-              description="Select a local Git repository above to begin inspection."
-            />
-          )}
+        {selectedPath && (
+          <Panel
+            title="Repository inspection"
+            icon={<GitBranch className="h-5 w-5" />}
+            status={{ tone: repoStatus.tone, label: repoStatus.label }}
+          >
+            {isInspecting && (
+              <p className="text-sm text-zinc-400">Inspecting repository...</p>
+            )}
 
-          {selectedPath && isInspecting && (
-            <p className="text-sm text-zinc-400">Inspecting repository...</p>
-          )}
-
-          {inspectionError && (
-            <div className="rounded-lg border border-red-900/70 bg-red-950/30 p-4">
-              <div className="flex items-center gap-2">
-                <XCircle className="h-4 w-4 text-red-200" />
-                <p className="text-sm font-medium text-red-200">
-                  Repository inspection failed
+            {inspectionError && (
+              <div className="rounded-lg border border-red-900/70 bg-red-950/30 p-4">
+                <div className="flex items-center gap-2">
+                  <XCircle className="h-4 w-4 text-red-200" />
+                  <p className="text-sm font-medium text-red-200">
+                    Repository inspection failed
+                  </p>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-red-100/80">
+                  {inspectionError}
                 </p>
               </div>
-              <p className="mt-2 text-sm leading-6 text-red-100/80">
-                {inspectionError}
-              </p>
-            </div>
-          )}
+            )}
 
-          {repoSummary && (
-            <dl className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <dt className="text-sm text-zinc-500">Repo name</dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-100">
-                  {repoSummary.repo_name}
-                </dd>
-              </div>
+            {repoSummary && (
+              <dl className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <dt className="text-sm text-zinc-500">Repo name</dt>
+                  <dd className="mt-1 text-sm font-medium text-zinc-100">
+                    {repoSummary.repo_name}
+                  </dd>
+                </div>
 
-              <div>
-                <dt className="text-sm text-zinc-500">Current branch</dt>
-                <dd className="mt-1">
-                  <StatusBadge tone="idle" icon={<GitBranch className="h-3.5 w-3.5" />}>
-                    {repoSummary.current_branch ?? "Detached HEAD / unknown"}
-                  </StatusBadge>
-                </dd>
-              </div>
+                <div>
+                  <dt className="text-sm text-zinc-500">Current branch</dt>
+                  <dd className="mt-1">
+                    <StatusBadge tone="idle" icon={<GitBranch className="h-3.5 w-3.5" />}>
+                      {repoSummary.current_branch ?? "Detached HEAD / unknown"}
+                    </StatusBadge>
+                  </dd>
+                </div>
 
-              <div>
-                <dt className="text-sm text-zinc-500">Git repository status</dt>
-                <dd className="mt-1">
-                  <StatusBadge tone={repoSummary.is_git_repo ? "pass" : "fail"}>
-                    {repoSummary.is_git_repo
-                      ? "Valid Git repository"
-                      : "Not a Git repository"}
-                  </StatusBadge>
-                </dd>
-              </div>
+                <div>
+                  <dt className="text-sm text-zinc-500">Git repository status</dt>
+                  <dd className="mt-1">
+                    <StatusBadge tone={repoSummary.is_git_repo ? "pass" : "fail"}>
+                      {repoSummary.is_git_repo
+                        ? "Valid Git repository"
+                        : "Not a Git repository"}
+                    </StatusBadge>
+                  </dd>
+                </div>
 
-              <div>
-                <dt className="text-sm text-zinc-500">Working tree state</dt>
-                <dd className="mt-1">
-                  <StatusBadge tone={repoSummary.has_uncommitted_changes ? "warning" : "pass"}>
-                    {repoSummary.has_uncommitted_changes ? "Dirty" : "Clean"}
-                  </StatusBadge>
-                </dd>
-              </div>
+                <div>
+                  <dt className="text-sm text-zinc-500">Working tree state</dt>
+                  <dd className="mt-1">
+                    <StatusBadge tone={repoSummary.has_uncommitted_changes ? "warning" : "pass"}>
+                      {repoSummary.has_uncommitted_changes ? "Dirty" : "Clean"}
+                    </StatusBadge>
+                  </dd>
+                </div>
 
-              <div className="sm:col-span-2">
-                <dt className="text-sm text-zinc-500">Repo path</dt>
-                <dd className="mt-1 overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-950 p-3 font-mono text-sm text-zinc-200">
-                  {repoSummary.repo_path}
-                </dd>
-              </div>
-            </dl>
-          )}
-        </Panel>
+                <div className="sm:col-span-2">
+                  <dt className="text-sm text-zinc-500">Repo path</dt>
+                  <dd className="mt-1 overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-950 p-3 font-mono text-sm text-zinc-200">
+                    {repoSummary.repo_path}
+                  </dd>
+                </div>
+              </dl>
+            )}
+          </Panel>
+        )}
 
         {repoSummary && (
           <ChangedFilesPanel

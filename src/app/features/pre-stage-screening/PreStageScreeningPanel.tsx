@@ -58,13 +58,6 @@ const levelTone: Record<ScreeningFinding["level"], StatusTone> = {
   fail: "fail",
 };
 
-const levelAccentBorder: Record<ScreeningFinding["level"], string> = {
-  pass: "border-l-emerald-500/60",
-  info: "border-l-zinc-600",
-  warning: "border-l-amber-500/60",
-  fail: "border-l-red-500/60",
-};
-
 export function PreStageScreeningPanel({
   repoSummary,
   changedFiles,
@@ -229,7 +222,7 @@ export function PreStageScreeningPanel({
                       {levelFindings.map((finding) => (
                         <li
                           key={finding.id}
-                          className={`rounded-lg border border-l-2 border-zinc-800 bg-zinc-950 p-4 ${levelAccentBorder[finding.level]}`}
+                          className="rounded-lg border border-zinc-800 bg-zinc-950 p-4"
                         >
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                             <div className="min-w-0">
@@ -241,7 +234,7 @@ export function PreStageScreeningPanel({
                               </p>
                             </div>
 
-                            <span className="w-fit rounded-md border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-xs font-medium text-zinc-300">
+                            <span className="w-fit rounded-md border border-zinc-700 bg-zinc-800/60 px-2 py-0.5 text-xs font-medium text-zinc-300">
                               {sourceLabels[finding.source]}
                             </span>
                           </div>

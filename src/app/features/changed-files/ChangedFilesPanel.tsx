@@ -25,23 +25,24 @@ const statusLabels: Record<ChangedFile["status"], string> = {
 function statusClassName(status: ChangedFile["status"]) {
   switch (status) {
     case "added":
-      return "border-emerald-900/70 bg-emerald-950/40 text-emerald-200";
+      return "border-emerald-500/20 bg-emerald-500/10 text-emerald-300";
     case "modified":
-      return "border-amber-900/70 bg-amber-950/40 text-amber-200";
+      return "border-amber-500/20 bg-amber-500/10 text-amber-300";
     case "deleted":
-      return "border-red-900/70 bg-red-950/40 text-red-200";
+      return "border-red-500/20 bg-red-500/10 text-red-300";
     case "renamed":
     case "copied":
-      return "border-sky-900/70 bg-sky-950/40 text-sky-200";
+      return "border-sky-500/20 bg-sky-500/10 text-sky-300";
     case "untracked":
-      return "border-violet-900/70 bg-violet-950/40 text-violet-200";
+      return "border-violet-500/20 bg-violet-500/10 text-violet-300";
     default:
-      return "border-zinc-700 bg-zinc-950 text-zinc-300";
+      return "border-zinc-700 bg-zinc-800/60 text-zinc-300";
   }
 }
 
 const badgeClassName =
   "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium";
+const neutralBadgeClassName = "border-zinc-700 bg-zinc-800/60 text-zinc-300";
 
 function fileIndicators(file: ChangedFile) {
   if (file.is_untracked) {
@@ -152,7 +153,7 @@ export function ChangedFilesPanel({
                       {indicators.map((indicator) => (
                         <span
                           key={indicator}
-                          className={`${badgeClassName} border-zinc-700 bg-zinc-900 text-zinc-300`}
+                          className={`${badgeClassName} ${neutralBadgeClassName}`}
                         >
                           {indicator}
                         </span>

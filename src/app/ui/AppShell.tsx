@@ -10,9 +10,9 @@ export interface AppShellProps {
 
 const RAIL_STICKY_CLASSES = {
   none: "",
-  header: "lg:sticky lg:top-16",
-  pipeline: "lg:sticky lg:top-11",
-  both: "lg:sticky lg:top-[6.75rem]",
+  header: "lg:sticky lg:top-16 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto",
+  pipeline: "lg:sticky lg:top-11 lg:max-h-[calc(100vh-4.75rem)] lg:overflow-y-auto",
+  both: "lg:sticky lg:top-[6.75rem] lg:max-h-[calc(100vh-8.75rem)] lg:overflow-y-auto",
 } as const;
 
 export function AppShell({

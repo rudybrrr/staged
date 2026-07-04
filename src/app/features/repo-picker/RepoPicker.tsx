@@ -39,7 +39,7 @@ export function RepoPicker({ selectedPath, onSelectPath }: RepoPickerProps) {
       icon={<FolderOpen className="h-5 w-5" />}
       actions={
         <ActionButton
-          variant="primary"
+          variant="secondary"
           onClick={handleSelectFolder}
           disabled={isPicking}
         >
