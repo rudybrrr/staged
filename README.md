@@ -18,6 +18,16 @@ Milestones 1, 2, 3, 4, 5, 6, 7, 8, 9, 10A, 11, and 12 (including the 12F follow-
 
 Milestone 12 and its 12F follow-up (`docs/ui-visual-redesign-plan.md`) are implemented visual-only polish and redesign passes: a visible evidence pipeline strip, a rebalanced two-column layout, a review rail verdict card with collapsed payload/token details, grouped evidence workbench panels, unified status badges, and more readable code/diff/output blocks. No product behavior, backend behavior, AI/API integration, RAG implementation, Stage History, or persistence was added; the app is now more portfolio-demo and screenshot ready.
 
+## Demo Screenshots
+
+Staged starts as a local-first pre-commit verification workbench before any AI/API integration.
+
+![Staged empty state](docs/assets/staged-empty-state.png)
+
+The main workbench shows the current local repository workflow, evidence panels, and deterministic report preview.
+
+![Staged main workbench](docs/assets/staged-main-workbench.png)
+
 ## Current implementation status
 
 Implemented:
