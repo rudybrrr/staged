@@ -12,11 +12,15 @@ Local-first verification before commit.
 
 ## Current milestone
 
-Milestone 12: MVP UI Polish, plus its 12F visual redesign follow-up.
+Milestone 13: Provider/API Setup and Approval Flow.
 
-Milestones 1, 2, 3, 4, 5, 6, 7, 8, 9, 10A, 11, and 12 (including the 12F follow-up) are implemented. Staged can select a local Git repository, validate repository state, show repo metadata, list changed files, display read-only unified diffs for selected changed files, run allowlisted verification commands, show deterministic pre-stage screening findings without AI, build a read-only local Stage Payload preview from existing app state, show a local approximate Token Budget estimate for the current Stage Payload, present a local read-only Staging Ground before any future AI submission, run a local MVP Safety Gate with redacted preview, show a local read-only Stage Report preview generated from deterministic local evidence, and copy that current local Stage Report as Markdown.
+Milestones 1, 2, 3, 4, 5, 6, 7, 8, 9, 10A, 11, 12 (including the 12F follow-up), and 13 are implemented. Staged can select a local Git repository, validate repository state, show repo metadata, list changed files, display read-only unified diffs for selected changed files, run allowlisted verification commands, show deterministic pre-stage screening findings without AI, build a read-only local Stage Payload preview from existing app state, show a local approximate Token Budget estimate for the current Stage Payload, present a local read-only Staging Ground before any future AI submission, run a local MVP Safety Gate with redacted preview, show a local read-only Stage Report preview generated from deterministic local evidence, copy that current local Stage Report as Markdown, and show local provider readiness metadata for a future AI approval flow.
 
 Milestone 12 and its 12F follow-up (`docs/ui-visual-redesign-plan.md`) are implemented visual-only polish and redesign passes: a visible evidence pipeline strip, a rebalanced two-column layout, a review rail verdict card with collapsed payload/token details, grouped evidence workbench panels, unified status badges, and more readable code/diff/output blocks. No product behavior, backend behavior, AI/API integration, RAG implementation, Stage History, or persistence was added; the app is now more portfolio-demo and screenshot ready.
+
+Milestone 13 is implemented as a local provider readiness and future approval gate. The backend checks whether `STAGED_OPENAI_API_KEY` is present, with `OPENAI_API_KEY` as a fallback when available, and returns only readiness metadata: configured state, provider name, environment variable source, and a user-facing message. API key values are never returned, displayed, logged, or persisted. Provider readiness is local environment detection only; it does not validate keys over the network.
+
+The future `Generate AI Stage Report` action remains disabled because real structured AI Stage Report generation is not implemented yet. Disabled reasons are visible, Safety Gate `blocked` status prevents future submission eligibility, and the UI communicates that only a redacted payload may be submitted in a later milestone. No AI call, API request, network request, provider SDK, prompt construction, structured model output, Stage History, or RAG implementation exists yet.
 
 ## Demo Screenshots
 
@@ -182,11 +186,23 @@ Implemented:
 - Read-only Markdown preview.
 - Exported Markdown includes local-preview and no-AI warning, report metadata, repository/change summary, deterministic evidence, Safety Gate status, Token Budget estimate, command result summary when available, screening findings, payload limitations, risk findings, missing evidence, human review checklist, and recommendation.
 - Markdown Export is local-only, not AI-generated, not persisted, and not cloud-synced.
+- Backend provider readiness command for future AI setup.
+- Local detection of `STAGED_OPENAI_API_KEY`.
+- Local fallback detection of `OPENAI_API_KEY` when available.
+- Provider readiness metadata with configured boolean, provider name, environment variable source, and message.
+- API key values are not returned, displayed, logged, or persisted.
+- Provider readiness is not validated over the network.
+- Frontend Provider Readiness / Future AI Approval UI.
+- Visible disabled reasons for the future AI action.
+- Future `Generate AI Stage Report` action remains disabled.
+- Safety Gate `blocked` status prevents future submission eligibility.
+- Redacted-payload-only rule is communicated for the future submission path.
 - No API calls.
 - No LLM calls.
 - No provider or model selection.
+- No provider SDK.
 - No prompt construction.
-- No backend logic.
+- No backend AI generation logic.
 - No persistence.
 - No Stage History.
 
@@ -197,11 +213,11 @@ Not implemented yet:
 - Backend scanning.
 - Full-repo scanning.
 - Submit behavior.
-- Safety Gate enforcement for a real submission path.
+- Safety Gate enforcement for an actual network submission path.
 - SQLite.
 - Stage History.
 - Milestone 10B real LLM Stage Report generation.
-- OpenAI/API integration.
+- Real OpenAI/API request integration.
 - Provider or model selection.
 - Prompt construction.
 - Structured output validation from model responses.
