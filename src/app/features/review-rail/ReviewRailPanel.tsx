@@ -6,6 +6,7 @@ import type { StagePayload } from "../../lib/stagePayload";
 import type { StageReport } from "../../lib/stageReport";
 import type { StagingGroundReadiness } from "../../lib/stagingGround";
 import type { TokenBudget } from "../../lib/tokenBudget";
+import type { FutureAiApproval, ProviderReadinessState } from "../../types/providerReadiness";
 import {
   ActionButton,
   Panel,
@@ -157,29 +158,52 @@ function PipelineMiniSummary({ steps }: { steps: PipelineStep[] }) {
   );
 }
 
-function detailsSummary(stagePayload: StagePayload | null, tokenBudget: TokenBudget | null) {
-  if (!stagePayload) {
-    return "No local evidence yet";
+function providerSummary(providerReadinessState: ProviderReadinessState) {
+  if (providerReadinessState.loading) {
+    return "Provider checking";
   }
 
-  const parts = [
+  if (providerReadinessState.error) {
+    return "Provider check error";
+  }
+
+  return providerReadinessState.readiness?.configured
+    ? "Provider configured"
+    : "Provider not configured";
+}
+
+function detailsSummary(
+  stagePayload: StagePayload | null,
+  tokenBudget: TokenBudget | null,
+  providerReadinessState: ProviderReadinessState,
+) {
+  const parts = [providerSummary(providerReadinessState)];
+
+  if (!stagePayload) {
+    parts.push("No local evidence yet");
+    return parts.join(" | ");
+  }
+
+  parts.push(
     stagePayload.schema_version,
     `${stagePayload.changes.changed_file_count} changed files`,
-  ];
+  );
 
   if (tokenBudget) {
     parts.push(`${tokenBudget.estimated_tokens.toLocaleString()} tokens`);
   }
 
-  return parts.join(" · ");
+  return parts.join(" | ");
 }
-
 type ReviewRailPanelProps = {
   stagePayload: StagePayload | null;
   tokenBudget: TokenBudget | null;
   safetyGateResult: SafetyGateResult | null;
   stageReport: StageReport | null;
   stagingGroundReadiness: StagingGroundReadiness;
+  providerReadinessState: ProviderReadinessState;
+  futureAiApproval: FutureAiApproval;
+  onRefreshProviderReadiness: () => void;
   hasValidRepo: boolean;
   pipelineSteps: PipelineStep[];
 };
@@ -190,6 +214,9 @@ export function ReviewRailPanel({
   safetyGateResult,
   stageReport,
   stagingGroundReadiness,
+  providerReadinessState,
+  futureAiApproval,
+  onRefreshProviderReadiness,
   hasValidRepo,
   pipelineSteps,
 }: ReviewRailPanelProps) {
@@ -206,13 +233,16 @@ export function ReviewRailPanel({
         description="Stage Payload, Token Budget, Staging Ground, Safety Gate, and Stage Report."
         collapsible
         defaultOpen={false}
-        summary={detailsSummary(stagePayload, tokenBudget)}
+        summary={detailsSummary(stagePayload, tokenBudget, providerReadinessState)}
       >
         <StagePayloadPreviewPanel payload={stagePayload} embedded />
         <TokenBudgetPanel budget={tokenBudget} embedded />
         <StagingGroundPanel
           hasValidRepo={hasValidRepo}
           readiness={stagingGroundReadiness}
+          providerReadinessState={providerReadinessState}
+          futureAiApproval={futureAiApproval}
+          onRefreshProviderReadiness={onRefreshProviderReadiness}
           embedded
         />
         <SafetyGatePanel result={safetyGateResult} embedded />

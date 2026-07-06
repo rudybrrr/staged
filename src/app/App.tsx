@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import {
   FolderOpen,
   GitBranch,
@@ -29,6 +30,7 @@ import { buildLocalStageReportPreview } from "./lib/stageReport";
 import { buildStagePayload } from "./lib/stagePayload";
 import { buildStagingGroundReadiness } from "./lib/stagingGround";
 import { buildTokenBudget } from "./lib/tokenBudget";
+import type { FutureAiApproval, ProviderReadinessState } from "./types/providerReadiness";
 import {
   AppShell,
   MetricPill,
@@ -80,12 +82,49 @@ export default function App() {
   const [isLoadingDiff, setIsLoadingDiff] = useState(false);
   const [commandRunnerState, setCommandRunnerState] =
     useState<CommandRunnerState>(() => createInitialCommandRunnerState());
+  const [providerReadinessState, setProviderReadinessState] =
+    useState<ProviderReadinessState>({
+      loading: true,
+      readiness: null,
+      error: null,
+    });
+  const refreshProviderReadiness = useCallback(async () => {
+    setProviderReadinessState((current) => ({
+      ...current,
+      loading: true,
+      error: null,
+    }));
+
+    try {
+      const readiness = await invoke<ProviderReadinessState["readiness"]>(
+        "get_provider_readiness",
+      );
+      setProviderReadinessState({
+        loading: false,
+        readiness,
+        error: null,
+      });
+    } catch (error) {
+      setProviderReadinessState({
+        loading: false,
+        readiness: null,
+        error: errorMessage(
+          error,
+          "Unable to check local provider readiness.",
+        ),
+      });
+    }
+  }, []);
   const handleCommandRunnerStateChange = useCallback(
     (state: CommandRunnerState) => {
       setCommandRunnerState(state);
     },
     [],
   );
+  useEffect(() => {
+    void refreshProviderReadiness();
+  }, [refreshProviderReadiness]);
+
   const diffRequestId = useRef(0);
   const repoRequestId = useRef(0);
   const screeningFindings = useMemo(
@@ -166,6 +205,46 @@ export default function App() {
       }),
     [safetyGateResult, stagePayload, stagingGroundReadiness, tokenBudget],
   );
+
+  const futureAiApproval: FutureAiApproval = useMemo(() => {
+    const implementationReason = "AI generation not implemented yet";
+    const readinessReasons: string[] = [];
+
+    if (providerReadinessState.loading) {
+      readinessReasons.push("Provider readiness check in progress");
+    } else if (providerReadinessState.error) {
+      readinessReasons.push("Provider readiness check failed");
+    } else if (!providerReadinessState.readiness?.configured) {
+      readinessReasons.push("Provider not configured");
+    }
+
+    if (!stagePayload) {
+      readinessReasons.push("Stage Payload missing");
+    }
+
+    if (safetyGateResult?.status === "blocked") {
+      readinessReasons.push("Safety Gate blocked");
+    }
+
+    if (!safetyGateResult?.redacted_payload_preview && !safetyGateResult) {
+      readinessReasons.push("Redacted payload not ready");
+    }
+
+    const eligibleWhenImplemented =
+      readinessReasons.length === 0 && stagingGroundReadiness.status !== "not_ready";
+
+    return {
+      eligibleWhenImplemented,
+      disabledReasons: [...readinessReasons, implementationReason],
+    };
+  }, [
+    providerReadinessState.error,
+    providerReadinessState.loading,
+    providerReadinessState.readiness?.configured,
+    safetyGateResult,
+    stagePayload,
+    stagingGroundReadiness.status,
+  ]);
 
   const pipelineSteps: PipelineStep[] = useMemo(() => {
     const payloadStep: PipelineStep = stagePayload
@@ -372,7 +451,7 @@ export default function App() {
   if (inspectionError) {
     repoStatus = { tone: "fail", label: "Invalid repo" };
   } else if (selectedPath && isInspecting) {
-    repoStatus = { tone: "idle", label: "Inspecting…" };
+    repoStatus = { tone: "idle", label: "Inspecting..." };
   } else if (repoSummary) {
     if (!repoSummary.is_git_repo) {
       repoStatus = { tone: "fail", label: "Not a Git repository" };
@@ -465,6 +544,9 @@ export default function App() {
           safetyGateResult={safetyGateResult}
           stageReport={stageReport}
           stagingGroundReadiness={stagingGroundReadiness}
+          providerReadinessState={providerReadinessState}
+          futureAiApproval={futureAiApproval}
+          onRefreshProviderReadiness={refreshProviderReadiness}
           hasValidRepo={repoSummary?.is_git_repo ?? false}
           pipelineSteps={pipelineSteps}
         />

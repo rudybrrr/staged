@@ -1,11 +1,15 @@
-import { ClipboardCheck } from "lucide-react";
+import { ClipboardCheck, RefreshCw, Sparkles } from "lucide-react";
 
 import type { StagingGroundReadiness } from "../../lib/stagingGround";
+import type { FutureAiApproval, ProviderReadinessState } from "../../types/providerReadiness";
 import { ActionButton, EmptyState, Panel, StatusBadge, type StatusTone } from "../../ui";
 
 type StagingGroundPanelProps = {
   hasValidRepo: boolean;
   readiness: StagingGroundReadiness;
+  providerReadinessState: ProviderReadinessState;
+  futureAiApproval: FutureAiApproval;
+  onRefreshProviderReadiness: () => void;
   embedded?: boolean;
 };
 
@@ -58,9 +62,130 @@ function safetyGateChecklistState(
   return { tone: "blocked", label: "Missing" };
 }
 
+function providerReadinessStatus(
+  state: ProviderReadinessState,
+): { tone: StatusTone; label: string } {
+  if (state.loading) {
+    return { tone: "idle", label: "Checking" };
+  }
+
+  if (state.error) {
+    return { tone: "blocked", label: "Check failed" };
+  }
+
+  return state.readiness?.configured
+    ? { tone: "pass", label: "Configured" }
+    : { tone: "warning", label: "Not configured" };
+}
+
+function ProviderApprovalSection({
+  readiness,
+  providerReadinessState,
+  futureAiApproval,
+  onRefreshProviderReadiness,
+}: {
+  readiness: StagingGroundReadiness;
+  providerReadinessState: ProviderReadinessState;
+  futureAiApproval: FutureAiApproval;
+  onRefreshProviderReadiness: () => void;
+}) {
+  const providerStatus = providerReadinessStatus(providerReadinessState);
+  const providerMessage =
+    providerReadinessState.error ??
+    providerReadinessState.readiness?.message ??
+    "Provider readiness has not been checked yet.";
+  const providerSource = providerReadinessState.readiness?.source ?? "None detected";
+
+  return (
+    <section className="rounded-lg border border-zinc-800 bg-zinc-950 p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-medium text-zinc-200">
+              Provider Readiness / Future AI Approval
+            </h3>
+            <StatusBadge tone={providerStatus.tone}>{providerStatus.label}</StatusBadge>
+            {futureAiApproval.eligibleWhenImplemented && (
+              <StatusBadge tone="preview">Ready when implemented</StatusBadge>
+            )}
+          </div>
+          <p className="mt-2 text-sm leading-6 text-zinc-500">
+            Provider readiness is checked locally from environment variables only. No AI call or network request is made yet.
+          </p>
+        </div>
+
+        <ActionButton
+          variant="ghost"
+          disabled={providerReadinessState.loading}
+          onClick={onRefreshProviderReadiness}
+          className="w-fit"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Refresh
+        </ActionButton>
+      </div>
+
+      <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-3">
+          <dt className="text-sm text-zinc-500">Provider</dt>
+          <dd className="mt-2 text-sm font-medium text-zinc-200">
+            {providerReadinessState.readiness?.provider ?? "None"}
+          </dd>
+        </div>
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-3">
+          <dt className="text-sm text-zinc-500">Source</dt>
+          <dd className="mt-2 text-sm font-medium text-zinc-200">
+            {providerSource}
+          </dd>
+        </div>
+      </dl>
+
+      <p className="mt-3 text-sm leading-6 text-zinc-400">{providerMessage}</p>
+
+      <ul className="mt-3 space-y-2 text-sm leading-6 text-zinc-400">
+        <li>Future generation will use the approved redacted payload only.</li>
+        <li>Safety Gate blocked state prevents future submission.</li>
+        <li>Real AI Stage Report generation is not implemented in this build.</li>
+        {readiness.safety_gate_status === "blocked" && (
+          <li className="text-red-200">
+            Safety Gate is blocked; no override exists here.
+          </li>
+        )}
+      </ul>
+
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <ActionButton variant="primary" disabled className="w-fit">
+          <Sparkles className="h-4 w-4" />
+          Generate AI Stage Report
+        </ActionButton>
+
+        <div className="min-w-0 flex-1 sm:max-w-md">
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            Disabled reasons
+          </p>
+          <ul className="mt-2 flex flex-wrap gap-2">
+            {futureAiApproval.disabledReasons.map((reason) => (
+              <li key={reason}>
+                <StatusBadge
+                  tone={reason === "AI generation not implemented yet" ? "idle" : "warning"}
+                >
+                  {reason}
+                </StatusBadge>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function StagingGroundPanel({
   hasValidRepo,
   readiness,
+  providerReadinessState,
+  futureAiApproval,
+  onRefreshProviderReadiness,
   embedded = false,
 }: StagingGroundPanelProps) {
   const checklist: Array<{
@@ -113,6 +238,13 @@ export function StagingGroundPanel({
       status={{ tone: statusTones[readiness.status], label: statusLabels[readiness.status] }}
       variant={embedded ? "inset" : "default"}
     >
+      <ProviderApprovalSection
+        readiness={readiness}
+        providerReadinessState={providerReadinessState}
+        futureAiApproval={futureAiApproval}
+        onRefreshProviderReadiness={onRefreshProviderReadiness}
+      />
+
       {!hasValidRepo && (
         <EmptyState
           icon={<ClipboardCheck className="h-5 w-5" />}
@@ -166,25 +298,6 @@ export function StagingGroundPanel({
                 </li>
               ))}
             </ul>
-          </section>
-
-          <section className="rounded-lg border border-zinc-800 bg-zinc-950 p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-zinc-200">
-                  Future AI review
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-zinc-500">
-                  No AI review has been generated. AI submission is disabled in
-                  this build — this is a local preview before any future model
-                  call, gated by a passing or warning-only Safety Gate.
-                </p>
-              </div>
-
-              <ActionButton variant="secondary" disabled className="w-fit">
-                AI review not implemented
-              </ActionButton>
-            </div>
           </section>
         </>
       )}
