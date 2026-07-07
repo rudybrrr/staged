@@ -1,14 +1,20 @@
-# Milestone 14: Real Structured AI Stage Report Generation
+# Post-MVP Milestone 14: Real Structured AI Stage Report Generation
 
-Status: Planned.
+Status: Post-MVP planned. This milestone is not required for the MVP cut.
+
+## MVP Boundary
+
+The MVP ends after Milestone 13 with local-first verification, provider readiness metadata, and the safety/approval boundary. It does not include real AI/LLM calls, OpenAI integration, RAG implementation, Stage History, or persistence.
+
+Milestone 14 is a future expansion for real structured AI Stage Report generation after the local verification spine is already proven.
 
 ## Goal
 
-Generate the first real AI-assisted Stage Report from the approved, redacted Stage Payload using structured output, while keeping deterministic evidence separate from AI judgment.
+Generate the first post-MVP AI-assisted Stage Report from the approved, redacted Stage Payload using structured output, while keeping deterministic evidence separate from AI judgment.
 
 ## Purpose
 
-Milestone 14 turns Staged from a local verification and reporting workbench into an AI-assisted verification workbench.
+Milestone 14 would extend Staged from a local verification and reporting workbench into an AI-assisted verification workbench.
 
 The AI generation path must operate only on the approved redacted Stage Payload. It must not receive the whole repository, unredacted payload content, API key values, or unrelated local files.
 
@@ -20,7 +26,9 @@ Staged is a Tauri v2, React, TypeScript, Vite, and Tailwind desktop app.
 
 The local verification spine is implemented. Markdown Export is implemented. Milestone 12 UI polish and the 12F visual redesign are complete. README screenshots are added. Milestone 13 Provider/API Setup and Approval Flow is implemented.
 
-Provider readiness currently checks local environment variables only. The future AI action is visible but disabled. RAG architecture is documented in `docs/rag-architecture.md`, but RAG is not implemented. Stage History persistence is not implemented. Real AI Stage Report generation is not implemented yet.
+The MVP proves local repo inspection, changed files, diff viewer, local command runner, deterministic Pre-Stage Screening, Stage Payload, Token Budget, Staging Ground, Safety Gate, local Stage Report preview, Markdown Export, and the provider readiness / approval boundary.
+
+Provider readiness currently checks local environment variables only. The future AI action is visible but disabled. RAG architecture is documented in `docs/rag-architecture.md`, but RAG is post-MVP and not implemented. Stage History persistence is not implemented. Real AI Stage Report generation is post-MVP and not implemented yet.
 
 ## Official API Basis
 
@@ -32,7 +40,7 @@ Milestone 14 should not use free-form model text as the report contract.
 
 ## In Scope
 
-Milestone 14 includes:
+Post-MVP Milestone 14 includes:
 
 - Backend AI generation command.
 - OpenAI Responses API integration.
@@ -186,7 +194,8 @@ Milestone 14 does not include:
 
 ## Definition of Done
 
-- Milestone clearly documents how real AI generation should work.
+- Milestone is clearly marked as post-MVP and not required for the MVP cut.
+- Milestone clearly documents how future real AI generation should work.
 - Safety Gate enforcement is documented.
 - Redacted-payload-only rule is documented.
 - Structured output requirement is documented.
@@ -215,6 +224,6 @@ Milestone 14 does not include:
 
 ## Notes
 
-Milestone 14 crosses the first real AI boundary, but it should stay narrow.
+Milestone 14 would cross the first real AI boundary after the MVP, but it should stay narrow.
 
 The product remains local-first. The AI receives only the explicit, approved, redacted evidence package. Local deterministic evidence remains the source of truth for what was observed; the model provides structured judgment over that evidence.
