@@ -1,7 +1,7 @@
 # Staged Research Paper
 
 **Working title:** Staged: A Local-First AI Verification Workbench for Auditing AI-Generated Code Before Commit  
-**Prepared for:** Rudy  
+**Prepared by:** Rudy (with Gen AI formatting)   
 **Date:** 25 June 2026  
 **Status:** Research memo for project planning and portfolio use, not a peer-reviewed publication
 
