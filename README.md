@@ -18,6 +18,8 @@ Milestones 1, 2, 3, 4, 5, 6, 7, 8, 9, 10A, 11, 12 (including the 12F follow-up),
 
 The MVP proves the local-first verification and approval boundary: Staged reduces and audits the repository evidence that would be sent to an AI reviewer, making privacy, payload size, safety, and local evidence visible before any model call.
 
+Final MVP acceptance criteria are tracked in [`docs/mvp-release-checklist.md`](docs/mvp-release-checklist.md).
+
 Milestone 12 and its 12F follow-up (`docs/ui-visual-redesign-plan.md`) are implemented visual-only polish and redesign passes: a visible evidence pipeline strip, a rebalanced two-column layout, a review rail verdict card with collapsed payload/token details, grouped evidence workbench panels, unified status badges, and more readable code/diff/output blocks. No product behavior, backend behavior, AI/API integration, RAG implementation, Stage History, or persistence was added; the app is now more portfolio-demo and screenshot ready.
 
 Milestone 13 is implemented as a local provider readiness and future approval gate. The backend checks whether `STAGED_OPENAI_API_KEY` is present, with `OPENAI_API_KEY` as a fallback when available, and returns only readiness metadata: configured state, provider name, environment variable source, and a user-facing message. API key values are never returned, displayed, logged, or persisted. Provider readiness is local environment detection only; it does not validate keys over the network.
