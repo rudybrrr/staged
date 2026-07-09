@@ -4,12 +4,12 @@
 
 * Overall status: `blocked`
 * Build status: `pass`
-* Number of blockers found: 1 implementation blocker, plus the derived release-decision failure
+* Number of blockers found: 1 documentation/release blocker, plus the derived release-decision failure
 * Number of manual checks remaining: 5 checklist items
 
-Audit date: July 9, 2026.
+Audit date: July 10, 2026.
 
-Scope: static code/docs inspection plus requested build checks. No product code, package files, lockfiles, Tauri config, README, milestone docs, RAG docs, UI design docs, screenshot assets, or the existing checklist were edited.
+Scope: static code/docs inspection plus requested build checks. This rerun edited only `docs/mvp-release-audit.md`. No product code, Rust files, package files, lockfiles, Tauri config/capability files, README, milestone docs, RAG docs, UI design docs, screenshot assets, or the existing checklist were edited during this audit.
 
 Build notes:
 
@@ -17,11 +17,19 @@ Build notes:
 * Rerunning the same build outside the sandbox with `npm.cmd run build` passed: TypeScript completed and Vite built `dist/`.
 * `npm.cmd run tauri dev` was attempted with a bounded timeout. It did not complete within the timeout, and the audit could not verify the GUI launch state or runtime console state automatically.
 
-Primary blocker:
+Prior blocker re-check:
 
-* User-facing redaction wording is inconsistent with implemented Safety Gate behavior. The Safety Gate creates a redacted payload preview, but Stage Payload and Token Budget text still says secret redaction is not implemented. This is a demo/readiness blocker, not a safety-engine blocker.
-  * Likely files: `src/app/features/stage-payload/StagePayloadPreviewPanel.tsx`, `src/app/lib/tokenBudget.ts`, `src/app/lib/stagePayload.ts`.
-  * Blocker: yes, because the MVP checklist requires consistent statuses and a clear safety/approval boundary.
+* Resolved - The previous implementation blocker is fixed in source. Stage Payload and Token Budget source strings no longer say secret redaction is not implemented.
+  * Evidence: `src/app/features/stage-payload/StagePayloadPreviewPanel.tsx`, `src/app/lib/tokenBudget.ts`, and `src/app/lib/stagePayload.ts` now describe Safety Gate redaction preview as available, local, bounded to the serialized Stage Payload and currently loaded selected-file diff, and non-mutating.
+  * Remaining limitation is accurate: full-repo and all-changed-file secret scanning remain post-MVP, and Safety Gate can miss secrets or produce false positives.
+
+Current blocker:
+
+* README still contains stale current-status wording that says Token Budget warnings include `secret redaction not implemented`.
+  * Exact issue: `README.md` line 137 no longer matches current source behavior after the blocker fix.
+  * Likely file: `README.md`.
+  * Blocker: yes for release decision, because the checklist includes README accuracy.
+  * Fix status: not fixed in this audit because README edits are explicitly out of scope.
 
 ## Build and launch
 
@@ -43,7 +51,7 @@ Primary blocker:
 * Pass - Changed files load for a dirty repo.
   * Evidence: `list_changed_files` runs `git status --porcelain=v1 --untracked-files=all`; `ChangedFilesPanel` renders returned files.
 * Pass - Clean repo state is handled clearly.
-  * Evidence: empty changed-file state says "No changed files"; repo status labels clean working tree as `Clean`.
+  * Evidence: empty changed-file state says `No changed files`; repo status labels clean working tree as `Clean`.
 * Pass - Changed file selection works.
   * Evidence: changed-file rows call `onSelectFile`; `App.tsx` stores `selectedChangedFile`.
 * Pass - Diff viewer loads the selected file diff.
@@ -80,7 +88,7 @@ Primary blocker:
 * Pass - Selected diff inclusion is clear.
   * Evidence: payload completeness includes `includes_selected_file_diff` and selected file path.
 * Pass - Missing evidence limitations are clear.
-  * Evidence: `buildStagePayload` records limitations for missing selected diff, omitted changed-file diffs, untracked content, missing command result, and missing supported commands.
+  * Evidence: `buildStagePayload` records limitations for missing selected diff, omitted changed-file diffs, untracked content, missing command result, missing supported commands, bounded Safety Gate coverage, and scanner false-positive/false-negative risk.
 * Pass - Payload is local-only.
   * Evidence: payload is built from frontend/Tauri local state only; no network call path was found.
 * Pass - Whole repo is not included by default.
@@ -93,7 +101,7 @@ Primary blocker:
 * Pass - Section contribution breakdown appears.
   * Evidence: `buildTokenBudget` builds per-section counts and percentages; `TokenBudgetPanel` renders a section table.
 * Pass - Warnings appear when evidence is missing or large.
-  * Evidence: warnings cover missing selected diff, listed files without diff content, untracked file contents, missing command result, missing scripts, large payloads, and large command output.
+  * Evidence: warnings cover missing selected diff, listed files without diff content, untracked file contents, missing command result, missing scripts, bounded Safety Gate coverage, large payloads, and large command output.
 * Pass - Estimator limitation is clear.
   * Evidence: `ESTIMATOR_NOTE` explains the local chars-divided-by-4 estimate and tokenizer limitation.
 
@@ -106,7 +114,7 @@ Primary blocker:
 * Pass - Redacted preview appears.
   * Evidence: `SafetyGatePanel` renders `redacted_payload_preview` in a labeled `CodeBlock`.
 * Pass - Original payload remains unchanged.
-  * Evidence: redaction operates on a copied serialized string and scanner limitations state that the preview does not mutate the original payload.
+  * Evidence: redaction operates on a copied serialized string; Stage Payload limitations and Safety Gate limitations state the preview does not mutate the original payload.
 * Pass - No data is sent externally.
   * Evidence: scanner is local TypeScript pattern matching; no external request path was found.
 
@@ -153,10 +161,8 @@ Primary blocker:
 * Manual required - Code blocks are readable.
   * Evidence: output and diff content use `CodeBlock`, but readability is visual and viewport dependent.
   * Manual verification: inspect diff output, stdout, stderr, payload JSON, redacted payload, report Markdown, and report JSON in the running app.
-* Fail - Statuses are consistent.
-  * Exact issue: redaction wording is inconsistent. `SafetyGatePanel` and `buildSafetyGateResult` implement and display a redacted payload preview, while Stage Payload and Token Budget still say secret redaction is not implemented.
-  * Likely files: `src/app/features/stage-payload/StagePayloadPreviewPanel.tsx`, `src/app/lib/tokenBudget.ts`, `src/app/lib/stagePayload.ts`.
-  * Blocker: yes. This is a user-facing MVP/demo readiness issue because the safety boundary is implemented but described inconsistently.
+* Pass - Statuses are consistent.
+  * Evidence: Stage Payload and Token Budget source wording now match Safety Gate behavior: redaction preview exists, is local-only, does not mutate the original payload, and is bounded to the current payload and selected diff.
 
 ## Privacy and scope
 
@@ -176,15 +182,16 @@ Primary blocker:
 ## Release decision
 
 * Fail - All MVP checklist items pass.
-  * Exact issue: at least one implementation checklist item fails, and five checklist items still need manual verification.
-  * Likely files: `docs/mvp-release-audit.md` records the current decision; implementation blocker likely files are listed above.
-  * Blocker: yes, but derivative. Do not count this as a second independent implementation blocker.
+  * Exact issue: README accuracy fails and five direct checklist items still need manual verification.
+  * Likely files: `README.md` for the documentation blocker; manual checks require the running Tauri app.
+  * Blocker: yes, but derivative. Do not count this as a second independent blocker.
 * Pass - Known limitations are documented.
   * Evidence: current README and `docs/mvp-tradeoffs.md` document local-only preview, no AI, no RAG, no Stage History, no persistence, scanner limitations, and post-MVP scope.
-* Manual required - README accurately reflects current behavior.
-  * Evidence: README broadly matches the inspected implementation, but final accuracy should be manually rechecked after resolving the redaction wording blocker.
-  * Manual verification: reread README after fixes and confirm it matches the app's current Stage Payload, Token Budget, Safety Gate, Staging Ground, and Stage Report language.
+* Fail - README accurately reflects current behavior.
+  * Exact issue: README still says Token Budget warnings include `secret redaction not implemented`, but source now correctly says Safety Gate redaction preview exists and full-repo secret scanning is not implemented yet.
+  * Likely file: `README.md`.
+  * Blocker: yes for final MVP release readiness.
 * Pass - Post-MVP roadmap is clear.
   * Evidence: README and tradeoff docs clearly identify real AI generation, RAG, Stage History, persistence, PR integration, and related work as post-MVP.
 
-Release recommendation: do not mark MVP complete yet. Resolve the redaction wording/status inconsistency, then complete the manual Tauri launch, runtime console, clipboard, visual screenshot-state, code-block readability, and README accuracy checks.
+Release recommendation: do not mark MVP complete yet. The prior implementation blocker is resolved. Before release, update README's stale Token Budget redaction wording, then complete the manual Tauri launch, runtime console, clipboard, visual screenshot-state, and code-block readability checks.
