@@ -138,7 +138,15 @@ export function buildStagePayload({
     limitations.push("No supported npm scripts were detected.");
   }
 
-  limitations.push("Payload has not been redacted yet.");
+  limitations.push(
+    "Safety Gate redaction preview is available separately and does not mutate the original Stage Payload.",
+  );
+  limitations.push(
+    "Safety Gate coverage is bounded to the serialized Stage Payload and currently loaded selected-file diff; full-repo and all-changed-file secret scanning are not implemented.",
+  );
+  limitations.push(
+    "Safety Gate can miss secrets and can produce false positives.",
+  );
   limitations.push("Payload has not been reviewed by AI.");
 
   return {

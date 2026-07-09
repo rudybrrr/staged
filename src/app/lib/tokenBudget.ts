@@ -155,9 +155,10 @@ export function buildTokenBudget(payload: StagePayload): TokenBudget {
   }
 
   warnings.push({
-    id: "secret-redaction-not-implemented",
+    id: "bounded-safety-gate-coverage",
     level: "warning",
-    message: "Secret redaction is not implemented yet.",
+    message:
+      "Safety Gate redaction preview is available, but this MVP only scans the current Stage Payload and selected-file diff; full-repo secret scanning is not implemented yet.",
   });
 
   if (estimatedTokens > 8000) {

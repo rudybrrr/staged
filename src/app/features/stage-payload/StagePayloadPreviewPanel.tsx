@@ -28,7 +28,7 @@ export function StagePayloadPreviewPanel({
     <Panel
       title="Stage Payload"
       icon={<Package className="h-5 w-5" />}
-      description="Local preview only. No AI call has been made. Secret redaction is not implemented yet."
+      description="Local preview only. Safety Gate provides a local redaction preview for the serialized payload and currently loaded selected-file diff without changing this original payload."
       status={payload ? { tone: "preview", label: "Read-only JSON" } : undefined}
       variant={embedded ? "inset" : "default"}
     >
