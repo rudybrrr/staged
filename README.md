@@ -134,7 +134,7 @@ Implemented:
 - Section-level payload size breakdown.
 - Section percentages.
 - Sections sorted by size.
-- Token Budget warnings for approximate estimation, missing selected-file diff content, changed files listed without diff content, untracked file contents not included, missing command results, missing supported npm scripts, secret redaction not implemented, large payload size, large selected-file diff, and large command output.
+- Token Budget warnings cover approximate estimation, missing or oversized evidence, and bounded Safety Gate coverage. The local-only Safety Gate redaction preview covers the serialized Stage Payload and currently loaded selected-file diff; full-repo and all-changed-file secret scanning are not implemented, and pattern scanning can produce false positives or miss secrets.
 - Frontend `StagingGroundReadiness` type.
 - Frontend `buildStagingGroundReadiness` utility.
 - Read-only Staging Ground panel.
