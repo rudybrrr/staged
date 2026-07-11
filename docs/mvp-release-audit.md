@@ -2,41 +2,38 @@
 
 ## Summary
 
-* Overall status: `blocked`
+* Overall status: `manual verification required`
 * Build status: `pass`
-* Number of blockers found: 1 documentation/release blocker, plus the derived release-decision failure
+* Number of blockers found: 0
 * Number of manual checks remaining: 5 checklist items
 
-Audit date: July 10, 2026.
+Audit date: July 11, 2026.
 
 Scope: static code/docs inspection plus requested build checks. This rerun edited only `docs/mvp-release-audit.md`. No product code, Rust files, package files, lockfiles, Tauri config/capability files, README, milestone docs, RAG docs, UI design docs, screenshot assets, or the existing checklist were edited during this audit.
 
 Build notes:
 
-* `npm run build` first failed in the sandbox with `Error: spawn EPERM` while Vite/esbuild loaded `vite.config.ts`.
-* Rerunning the same build outside the sandbox with `npm.cmd run build` passed: TypeScript completed and Vite built `dist/`.
-* `npm.cmd run tauri dev` was attempted with a bounded timeout. It did not complete within the timeout, and the audit could not verify the GUI launch state or runtime console state automatically.
+* `npm run build` failed in the sandbox with `Error: spawn EPERM` while Vite/esbuild loaded `vite.config.ts`.
+* The required Windows retry, `npm.cmd run build`, passed: TypeScript completed and Vite built `dist/` after transforming 1,820 modules.
+* `npm.cmd run tauri dev` was attempted for 30 seconds and then terminated at the audit boundary. The command remained running, but the audit did not directly observe the desktop window or runtime console, so GUI launch and runtime health remain unverified.
 
-Prior blocker re-check:
+## Prior blocker re-check
 
-* Resolved - The previous implementation blocker is fixed in source. Stage Payload and Token Budget source strings no longer say secret redaction is not implemented.
-  * Evidence: `src/app/features/stage-payload/StagePayloadPreviewPanel.tsx`, `src/app/lib/tokenBudget.ts`, and `src/app/lib/stagePayload.ts` now describe Safety Gate redaction preview as available, local, bounded to the serialized Stage Payload and currently loaded selected-file diff, and non-mutating.
-  * Remaining limitation is accurate: full-repo and all-changed-file secret scanning remain post-MVP, and Safety Gate can miss secrets or produce false positives.
-
-Current blocker:
-
-* README still contains stale current-status wording that says Token Budget warnings include `secret redaction not implemented`.
-  * Exact issue: `README.md` line 137 no longer matches current source behavior after the blocker fix.
-  * Likely file: `README.md`.
-  * Blocker: yes for release decision, because the checklist includes README accuracy.
-  * Fix status: not fixed in this audit because README edits are explicitly out of scope.
+* Pass - Stage Payload wording accurately describes the implemented Safety Gate redaction preview.
+  * Evidence: `src/app/features/stage-payload/StagePayloadPreviewPanel.tsx` and `src/app/lib/stagePayload.ts` say the preview is local, scans the serialized Stage Payload and currently loaded selected-file diff, and does not mutate the original payload.
+* Pass - Token Budget wording accurately describes the implemented, bounded Safety Gate coverage.
+  * Evidence: `src/app/lib/tokenBudget.ts` says redaction preview is available for the current Stage Payload and selected-file diff, while full-repo scanning is not implemented.
+* Pass - The previous README Token Budget/Safety Gate wording blocker is resolved.
+  * Evidence: `README.md` now says the local-only Safety Gate redaction preview covers the serialized Stage Payload and currently loaded selected-file diff; full-repo and all-changed-file secret scanning are not implemented; and pattern scanning may miss secrets or produce false positives. README also says the original Stage Payload remains unchanged.
+* Pass - The three wording surfaces consistently describe current behavior.
+  * Evidence: Safety Gate redaction preview is implemented and local-only, does not mutate the original Stage Payload, and has bounded scan coverage with documented false-positive/false-negative risk.
 
 ## Build and launch
 
 * Pass - `npm run build` passes.
   * Evidence: `npm.cmd run build` completed successfully after the sandbox-only esbuild `EPERM` failure.
 * Manual required - `npm run tauri dev` starts the desktop app.
-  * Evidence: `npm.cmd run tauri dev` was attempted but timed out after the bounded run window.
+  * Evidence: `npm.cmd run tauri dev` remained running during the 30-second bounded attempt, but the desktop window was not directly observed.
   * Manual verification: run `npm run tauri dev` locally, confirm the desktop window opens, and confirm it reaches the Staged workbench.
 * Manual required - App launches without console or runtime errors.
   * Evidence: command-only inspection cannot verify the GUI console or runtime state.
@@ -181,17 +178,14 @@ Current blocker:
 
 ## Release decision
 
-* Fail - All MVP checklist items pass.
-  * Exact issue: README accuracy fails and five direct checklist items still need manual verification.
-  * Likely files: `README.md` for the documentation blocker; manual checks require the running Tauri app.
-  * Blocker: yes, but derivative. Do not count this as a second independent blocker.
+* Manual required - All MVP checklist items pass.
+  * Evidence: static inspection, README accuracy, and the production build pass, with no implementation or documentation failures found. Five required GUI-dependent checklist items remain unverified.
+  * Manual verification: complete the Tauri launch, startup/runtime console, Copy Markdown, screenshot-state, and code-block readability checks listed above.
 * Pass - Known limitations are documented.
   * Evidence: current README and `docs/mvp-tradeoffs.md` document local-only preview, no AI, no RAG, no Stage History, no persistence, scanner limitations, and post-MVP scope.
-* Fail - README accurately reflects current behavior.
-  * Exact issue: README still says Token Budget warnings include `secret redaction not implemented`, but source now correctly says Safety Gate redaction preview exists and full-repo secret scanning is not implemented yet.
-  * Likely file: `README.md`.
-  * Blocker: yes for final MVP release readiness.
+* Pass - README accurately reflects current behavior.
+  * Evidence: README accurately states no real AI generation, no network model call, no RAG implementation, no Stage History persistence, bounded local-only Safety Gate coverage, and local Stage Report preview only. Its Token Budget wording now matches the implemented Safety Gate behavior and limitations.
 * Pass - Post-MVP roadmap is clear.
   * Evidence: README and tradeoff docs clearly identify real AI generation, RAG, Stage History, persistence, PR integration, and related work as post-MVP.
 
-Release recommendation: do not mark MVP complete yet. The prior implementation blocker is resolved. Before release, update README's stale Token Budget redaction wording, then complete the manual Tauri launch, runtime console, clipboard, visual screenshot-state, and code-block readability checks.
+Release recommendation: manual verification required. The prior implementation blocker and the README documentation blocker are resolved, and no current blockers were found. Do not mark MVP complete until the five required Tauri launch, runtime console, clipboard, visual screenshot-state, and code-block readability checks pass.
