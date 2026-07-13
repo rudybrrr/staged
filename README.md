@@ -10,7 +10,13 @@ Local-first verification before commit.
 - Vite
 - Tailwind CSS
 
-## Current milestone
+## MVP status
+
+Staged is a local-first pre-commit verification workbench. The local-first MVP is complete and release-ready.
+
+The MVP includes repository inspection, changed files, diff viewer, allowlisted command runner, deterministic Pre-Stage Screening, Stage Payload, Token Budget, Staging Ground, Safety Gate and redacted preview, local Stage Report preview, Markdown Export, provider readiness and future-AI approval boundary, and a polished workbench UI.
+
+The MVP does not include real AI/LLM generation, OpenAI network calls, RAG implementation, Stage History persistence, GitHub PR integration, auto-fixing, or cloud sync.
 
 Milestone 13: Provider/API Setup and Approval Flow is complete. The MVP cut ends here, before any real AI or LLM call.
 

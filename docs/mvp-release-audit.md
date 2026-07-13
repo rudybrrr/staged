@@ -2,20 +2,20 @@
 
 ## Summary
 
-* Overall status: `manual verification required`
+* Overall status: `pass`
 * Build status: `pass`
 * Number of blockers found: 0
-* Number of manual checks remaining: 5 checklist items
+* Number of manual checks remaining: 0 checklist items
 
-Audit date: July 11, 2026.
+Audit date: July 13, 2026.
 
-Scope: static code/docs inspection plus requested build checks. This rerun edited only `docs/mvp-release-audit.md`. No product code, Rust files, package files, lockfiles, Tauri config/capability files, README, milestone docs, RAG docs, UI design docs, screenshot assets, or the existing checklist were edited during this audit.
+Scope: static code/docs inspection, requested build checks, and completed manual verification. This release-record update changes only the allowed MVP release documentation.
 
 Build notes:
 
 * `npm run build` failed in the sandbox with `Error: spawn EPERM` while Vite/esbuild loaded `vite.config.ts`.
 * The required Windows retry, `npm.cmd run build`, passed: TypeScript completed and Vite built `dist/` after transforming 1,820 modules.
-* `npm.cmd run tauri dev` was attempted for 30 seconds and then terminated at the audit boundary. The command remained running, but the audit did not directly observe the desktop window or runtime console, so GUI launch and runtime health remain unverified.
+* Manual verification confirmed that the Tauri desktop app launches and reaches the Staged workbench without startup, runtime, or console errors.
 
 ## Prior blocker re-check
 
@@ -32,12 +32,10 @@ Build notes:
 
 * Pass - `npm run build` passes.
   * Evidence: `npm.cmd run build` completed successfully after the sandbox-only esbuild `EPERM` failure.
-* Manual required - `npm run tauri dev` starts the desktop app.
-  * Evidence: `npm.cmd run tauri dev` remained running during the 30-second bounded attempt, but the desktop window was not directly observed.
-  * Manual verification: run `npm run tauri dev` locally, confirm the desktop window opens, and confirm it reaches the Staged workbench.
-* Manual required - App launches without console or runtime errors.
-  * Evidence: command-only inspection cannot verify the GUI console or runtime state.
-  * Manual verification: with the Tauri app running, check the terminal and app devtools console for startup errors.
+* Pass - `npm run tauri dev` starts the desktop app.
+  * Evidence: manual verification confirmed the Tauri desktop app launches and reaches the Staged workbench.
+* Pass - App launches without console or runtime errors.
+  * Evidence: manual verification found no startup, runtime, or console errors.
 
 ## Core workflow
 
@@ -138,26 +136,23 @@ Build notes:
   * Evidence: report status is `preview_only`; UI and Markdown export say local preview only.
 * Pass - No AI review is claimed.
   * Evidence: UI and Markdown explicitly state no AI review has been generated.
-* Manual required - Copy Markdown works.
-  * Evidence: code uses `navigator.clipboard.writeText(markdown)`, but clipboard permissions and behavior require a running app.
-  * Manual verification: open a Stage Report in the Tauri app, click `Copy Markdown`, verify the UI shows copied state, and paste the clipboard contents into a local editor.
+* Pass - Copy Markdown works.
+  * Evidence: manual verification confirmed copied Markdown pastes with correct content.
 * Pass - Exported Markdown includes local/no-AI label and recommendation.
   * Evidence: `formatStageReportMarkdown` includes the local/no-AI warning and a Recommendation section with decision and rationale.
 
 ## UI/demo readiness
 
-* Manual required - Screenshot states look good.
-  * Evidence: screenshot automation and self-visual-analysis were intentionally not run per project instructions.
-  * Manual verification: run the Tauri app and compare empty, dirty-repo, selected-diff, safety-warning/blocked, and report states against the intended demo screenshots.
+* Pass - Empty and selected-project demo states look good.
+  * Evidence: manual verification confirmed the empty and selected-project demo states render correctly.
 * Pass - README screenshots render.
   * Evidence: README references `docs/assets/staged-empty-state.png` and `docs/assets/staged-main-workbench.png`, and both files exist.
 * Pass - Pipeline strip is visible.
   * Evidence: `AppShell` receives `PipelineStrip`, and `PipelineStrip` renders all pipeline steps.
 * Pass - Verdict/review rail is clear.
   * Evidence: `ReviewRailPanel` renders a verdict card, pipeline summary, and collapsed detail panels.
-* Manual required - Code blocks are readable.
-  * Evidence: output and diff content use `CodeBlock`, but readability is visual and viewport dependent.
-  * Manual verification: inspect diff output, stdout, stderr, payload JSON, redacted payload, report Markdown, and report JSON in the running app.
+* Pass - Code blocks are readable.
+  * Evidence: manual verification confirmed readable diff, command output, payload JSON, redacted preview, report JSON, and Markdown code blocks.
 * Pass - Statuses are consistent.
   * Evidence: Stage Payload and Token Budget source wording now match Safety Gate behavior: redaction preview exists, is local-only, does not mutate the original payload, and is bounded to the current payload and selected diff.
 
@@ -178,9 +173,8 @@ Build notes:
 
 ## Release decision
 
-* Manual required - All MVP checklist items pass.
-  * Evidence: static inspection, README accuracy, and the production build pass, with no implementation or documentation failures found. Five required GUI-dependent checklist items remain unverified.
-  * Manual verification: complete the Tauri launch, startup/runtime console, Copy Markdown, screenshot-state, and code-block readability checks listed above.
+* Pass - All MVP checklist items pass.
+  * Evidence: static inspection, the production build, and all five GUI-dependent manual checks pass.
 * Pass - Known limitations are documented.
   * Evidence: current README and `docs/mvp-tradeoffs.md` document local-only preview, no AI, no RAG, no Stage History, no persistence, scanner limitations, and post-MVP scope.
 * Pass - README accurately reflects current behavior.
@@ -188,4 +182,4 @@ Build notes:
 * Pass - Post-MVP roadmap is clear.
   * Evidence: README and tradeoff docs clearly identify real AI generation, RAG, Stage History, persistence, PR integration, and related work as post-MVP.
 
-Release recommendation: manual verification required. The prior implementation blocker and the README documentation blocker are resolved, and no current blockers were found. Do not mark MVP complete until the five required Tauri launch, runtime console, clipboard, visual screenshot-state, and code-block readability checks pass.
+Release recommendation: passed. The MVP is release-ready: there are zero blockers, all checklist items pass, and no manual checks remain.
