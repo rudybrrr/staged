@@ -8,6 +8,7 @@ mod commands {
 mod infra {
     pub mod git_cli;
     pub mod process_runner;
+    pub mod stage_history;
 }
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
