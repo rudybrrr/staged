@@ -1,5 +1,7 @@
 use std::error::Error;
 use std::fmt;
+use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard};
 use std::time::Duration;
@@ -170,6 +172,62 @@ impl Error for StageHistoryError {
     }
 }
 
+#[derive(Debug)]
+pub enum StageHistoryInitializationError {
+    ApplicationDataDirectoryResolution {
+        source: tauri::Error,
+    },
+    ApplicationDataDirectoryCreation {
+        path: PathBuf,
+        source: io::Error,
+    },
+    Database {
+        path: PathBuf,
+        source: StageHistoryError,
+    },
+    ManagedStateAlreadyRegistered,
+}
+
+impl fmt::Display for StageHistoryInitializationError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ApplicationDataDirectoryResolution { source } => {
+                write!(
+                    formatter,
+                    "failed to resolve the application data directory: {source}"
+                )
+            }
+            Self::ApplicationDataDirectoryCreation { path, source } => write!(
+                formatter,
+                "failed to create the application data directory at {}: {source}",
+                path.display()
+            ),
+            Self::Database { path, source } => write!(
+                formatter,
+                "failed to initialize the Stage History database at {}: {source}",
+                path.display()
+            ),
+            Self::ManagedStateAlreadyRegistered => {
+                write!(
+                    formatter,
+                    "Stage History managed state is already registered"
+                )
+            }
+        }
+    }
+}
+
+impl Error for StageHistoryInitializationError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::ApplicationDataDirectoryResolution { source } => Some(source),
+            Self::ApplicationDataDirectoryCreation { source, .. } => Some(source),
+            Self::Database { source, .. } => Some(source),
+            Self::ManagedStateAlreadyRegistered => None,
+        }
+    }
+}
+
 pub struct StageHistoryStore {
     connection: Mutex<Connection>,
 }
@@ -328,6 +386,50 @@ impl StageHistoryStore {
             .lock()
             .map_err(|_| StageHistoryError::ConnectionMutexPoisoned)
     }
+}
+
+fn stage_history_database_path(app_data_dir: &Path) -> PathBuf {
+    app_data_dir.join("stage-history.sqlite3")
+}
+
+fn initialize_store_in_app_data_dir(
+    app_data_dir: &Path,
+) -> Result<StageHistoryStore, StageHistoryInitializationError> {
+    fs::create_dir_all(app_data_dir).map_err(|source| {
+        StageHistoryInitializationError::ApplicationDataDirectoryCreation {
+            path: app_data_dir.to_path_buf(),
+            source,
+        }
+    })?;
+    let database_path = stage_history_database_path(app_data_dir);
+
+    StageHistoryStore::open(&database_path).map_err(|source| {
+        StageHistoryInitializationError::Database {
+            path: database_path,
+            source,
+        }
+    })
+}
+
+pub fn initialize_stage_history<R: tauri::Runtime>(
+    app: &mut tauri::App<R>,
+) -> Result<(), Box<dyn Error>> {
+    use tauri::Manager;
+
+    let result = (|| {
+        let app_data_dir = app.path().app_data_dir().map_err(|source| {
+            StageHistoryInitializationError::ApplicationDataDirectoryResolution { source }
+        })?;
+        let store = initialize_store_in_app_data_dir(&app_data_dir)?;
+
+        if !app.manage(store) {
+            return Err(StageHistoryInitializationError::ManagedStateAlreadyRegistered);
+        }
+
+        Ok(())
+    })();
+
+    result.map_err(|error| Box::new(error) as Box<dyn Error>)
 }
 
 fn migrate(connection: &mut Connection, path: &Path) -> Result<(), StageHistoryError> {
@@ -494,6 +596,7 @@ impl RecommendationDecision {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct StageHistoryArtifactsV1 {
+    // Callers must supply persistence-safe snapshots; this storage layer does not detect secrets.
     pub schema_version: ArtifactSchemaVersion,
     pub redacted_stage_payload: Value,
     pub token_budget: Value,
@@ -734,9 +837,10 @@ mod tests {
     use tempfile::TempDir;
 
     use super::{
-        ArtifactSchemaVersion, NewStageHistoryRecord, RecommendationDecision, ReportGenerationMode,
-        ReportStatus, SafetyGateStatus, StageHistoryArtifactsV1, StageHistoryError,
-        StageHistoryStore, DATABASE_SCHEMA_VERSION,
+        initialize_store_in_app_data_dir, stage_history_database_path, ArtifactSchemaVersion,
+        NewStageHistoryRecord, RecommendationDecision, ReportGenerationMode, ReportStatus,
+        SafetyGateStatus, StageHistoryArtifactsV1, StageHistoryError,
+        StageHistoryInitializationError, StageHistoryStore, DATABASE_SCHEMA_VERSION,
     };
 
     fn temporary_database_path() -> (TempDir, PathBuf) {
@@ -1395,5 +1499,71 @@ mod tests {
         ] {
             assert!(!keys.contains_key(disallowed));
         }
+    }
+
+    #[test]
+    fn database_path_uses_the_stage_history_filename() {
+        let app_data_dir = PathBuf::from("C:/app-data/staged");
+
+        assert_eq!(
+            stage_history_database_path(&app_data_dir),
+            app_data_dir.join("stage-history.sqlite3")
+        );
+    }
+
+    #[test]
+    fn app_data_initialization_creates_the_directory_and_database() {
+        let root = tempfile::tempdir().expect("temporary directory");
+        let app_data_dir = root.path().join("nested").join("staged");
+
+        let store = initialize_store_in_app_data_dir(&app_data_dir)
+            .expect("app data initialization succeeds");
+
+        assert!(app_data_dir.is_dir());
+        assert!(stage_history_database_path(&app_data_dir).is_file());
+        drop(store);
+    }
+
+    #[test]
+    fn app_data_directory_creation_failure_is_contextual() {
+        let root = tempfile::tempdir().expect("temporary directory");
+        let app_data_dir = root.path().join("not-a-directory");
+        std::fs::write(&app_data_dir, "file blocks directory creation")
+            .expect("creates blocking file");
+
+        let error = match initialize_store_in_app_data_dir(&app_data_dir) {
+            Ok(_) => panic!("directory creation must fail"),
+            Err(error) => error,
+        };
+
+        assert!(matches!(
+            error,
+            StageHistoryInitializationError::ApplicationDataDirectoryCreation {
+                ref path,
+                ..
+            } if path == &app_data_dir
+        ));
+    }
+
+    #[test]
+    fn database_open_failure_includes_the_database_path() {
+        let root = tempfile::tempdir().expect("temporary directory");
+        let app_data_dir = root.path().join("staged");
+        std::fs::create_dir_all(&app_data_dir).expect("creates app data directory");
+        let database_path = stage_history_database_path(&app_data_dir);
+        std::fs::create_dir(&database_path).expect("creates blocking database directory");
+
+        let error = match initialize_store_in_app_data_dir(&app_data_dir) {
+            Ok(_) => panic!("database open must fail"),
+            Err(error) => error,
+        };
+
+        assert!(matches!(
+            error,
+            StageHistoryInitializationError::Database {
+                ref path,
+                ..
+            } if path == &database_path
+        ));
     }
 }

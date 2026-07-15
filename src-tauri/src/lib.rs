@@ -8,6 +8,7 @@ mod commands {
 mod infra {
     pub mod git_cli;
     pub mod process_runner;
+    #[allow(dead_code)]
     pub mod stage_history;
 }
 
@@ -22,6 +23,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .setup(infra::stage_history::initialize_stage_history)
         .invoke_handler(tauri::generate_handler![
             greet,
             commands::diff::get_file_diff,
