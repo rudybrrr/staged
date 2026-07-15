@@ -70,6 +70,23 @@ pub enum StageHistoryError {
         scan_id: String,
         field: &'static str,
     },
+    MalformedArtifactJson {
+        scan_id: String,
+        source: serde_json::Error,
+    },
+    UnsupportedArtifactSchemaVersion {
+        scan_id: String,
+        found: i32,
+        supported: i32,
+    },
+    ArtifactSchemaVersionMismatch {
+        scan_id: String,
+        database_version: i32,
+        embedded_version: i32,
+    },
+    UnsupportedEmbeddedArtifactSchema {
+        scan_id: String,
+    },
 }
 
 impl fmt::Display for StageHistoryError {
@@ -105,6 +122,30 @@ impl fmt::Display for StageHistoryError {
                 formatter,
                 "Stage History record {scan_id} has an invalid {field} field"
             ),
+            Self::MalformedArtifactJson { scan_id, .. } => write!(
+                formatter,
+                "Stage History record {scan_id} has malformed artifact JSON"
+            ),
+            Self::UnsupportedArtifactSchemaVersion {
+                scan_id,
+                found,
+                supported,
+            } => write!(
+                formatter,
+                "Stage History record {scan_id} uses artifact schema version {found}, but this backend supports version {supported}"
+            ),
+            Self::ArtifactSchemaVersionMismatch {
+                scan_id,
+                database_version,
+                embedded_version,
+            } => write!(
+                formatter,
+                "Stage History record {scan_id} has mismatched artifact schema versions: database {database_version}, envelope {embedded_version}"
+            ),
+            Self::UnsupportedEmbeddedArtifactSchema { scan_id } => write!(
+                formatter,
+                "Stage History record {scan_id} uses an unsupported embedded artifact schema"
+            ),
         }
     }
 }
@@ -117,10 +158,14 @@ impl Error for StageHistoryError {
             }
             Self::DatabaseOperation { source, .. } => Some(source),
             Self::ArtifactSerialization { source } => Some(source),
+            Self::MalformedArtifactJson { source, .. } => Some(source),
             Self::UnsupportedDatabaseSchema { .. }
             | Self::ConnectionMutexPoisoned
             | Self::DuplicateScanId { .. }
-            | Self::InvalidStoredRecord { .. } => None,
+            | Self::InvalidStoredRecord { .. }
+            | Self::UnsupportedArtifactSchemaVersion { .. }
+            | Self::ArtifactSchemaVersionMismatch { .. }
+            | Self::UnsupportedEmbeddedArtifactSchema { .. } => None,
         }
     }
 }
@@ -585,10 +630,42 @@ impl StageHistorySummary {
 
 impl StageHistoryRecord {
     fn try_from_raw(raw: RawStageHistoryRecord) -> Result<Self, StageHistoryError> {
-        let artifacts = serde_json::from_str(&raw.artifacts_json).map_err(|_| {
-            StageHistoryError::InvalidStoredRecord {
+        let scan_id = raw.summary.scan_id.clone();
+        let artifact_value: Value =
+            serde_json::from_str(&raw.artifacts_json).map_err(|source| {
+                StageHistoryError::MalformedArtifactJson {
+                    scan_id: scan_id.clone(),
+                    source,
+                }
+            })?;
+        let embedded_version = embedded_artifact_version(&artifact_value).ok_or_else(|| {
+            StageHistoryError::UnsupportedEmbeddedArtifactSchema {
+                scan_id: scan_id.clone(),
+            }
+        })?;
+        let database_version = raw.summary.artifact_schema_version;
+
+        if database_version != embedded_version {
+            return Err(StageHistoryError::ArtifactSchemaVersionMismatch {
+                scan_id,
+                database_version,
+                embedded_version,
+            });
+        }
+
+        let supported_version = ArtifactSchemaVersion::V1.database_version();
+        if database_version != supported_version {
+            return Err(StageHistoryError::UnsupportedArtifactSchemaVersion {
+                scan_id,
+                found: database_version,
+                supported: supported_version,
+            });
+        }
+
+        let artifacts = serde_json::from_value(artifact_value).map_err(|source| {
+            StageHistoryError::MalformedArtifactJson {
                 scan_id: raw.summary.scan_id.clone(),
-                field: "artifacts_json",
+                source,
             }
         })?;
         let summary = StageHistorySummary::try_from_raw(raw.summary)?;
@@ -611,6 +688,15 @@ impl StageHistoryRecord {
             artifacts,
         })
     }
+}
+
+fn embedded_artifact_version(value: &Value) -> Option<i32> {
+    value
+        .get("schema_version")?
+        .as_str()?
+        .strip_prefix("stage-history-artifacts.v")?
+        .parse()
+        .ok()
 }
 
 fn read_summary_row(row: &Row<'_>) -> rusqlite::Result<RawStageHistorySummary> {
@@ -643,7 +729,7 @@ fn read_record_row(row: &Row<'_>) -> rusqlite::Result<RawStageHistoryRecord> {
 mod tests {
     use std::path::PathBuf;
 
-    use rusqlite::Connection;
+    use rusqlite::{params, Connection};
     use serde_json::{json, Value};
     use tempfile::TempDir;
 
@@ -1122,5 +1208,192 @@ mod tests {
         store.save_scan(&second).expect("second record saves");
 
         assert_eq!(store.list_scans().expect("list succeeds").len(), 2);
+    }
+
+    #[test]
+    fn malformed_artifact_json_returns_a_controlled_error() {
+        let (_directory, path) = temporary_database_path();
+        let store = StageHistoryStore::open(path).expect("database initializes");
+        store
+            .save_scan(&record_fixture(
+                "scan-malformed-read",
+                "2026-07-15T10:00:00.000Z",
+            ))
+            .expect("record saves");
+        store
+            .connection
+            .lock()
+            .expect("connection lock")
+            .execute(
+                "UPDATE stage_history SET artifacts_json = 'not-json' WHERE scan_id = ?1",
+                ["scan-malformed-read"],
+            )
+            .expect("corrupts test fixture");
+
+        let error = store
+            .read_scan("scan-malformed-read")
+            .expect_err("malformed JSON must fail");
+
+        assert!(matches!(
+            error,
+            StageHistoryError::MalformedArtifactJson { ref scan_id, .. }
+                if scan_id == "scan-malformed-read"
+        ));
+    }
+
+    #[test]
+    fn unsupported_database_artifact_version_returns_a_controlled_error() {
+        let (_directory, path) = temporary_database_path();
+        let store = StageHistoryStore::open(path).expect("database initializes");
+        store
+            .save_scan(&record_fixture(
+                "scan-artifact-v2",
+                "2026-07-15T10:00:00.000Z",
+            ))
+            .expect("record saves");
+        let mut artifacts = serde_json::to_value(artifact_fixture(None)).expect("serializes");
+        artifacts["schema_version"] = json!("stage-history-artifacts.v2");
+        store
+            .connection
+            .lock()
+            .expect("connection lock")
+            .execute(
+                "UPDATE stage_history
+                 SET artifact_schema_version = 2, artifacts_json = ?1
+                 WHERE scan_id = ?2",
+                params![artifacts.to_string(), "scan-artifact-v2"],
+            )
+            .expect("updates test fixture");
+
+        let error = store
+            .read_scan("scan-artifact-v2")
+            .expect_err("unsupported artifact version must fail");
+
+        assert!(matches!(
+            error,
+            StageHistoryError::UnsupportedArtifactSchemaVersion {
+                ref scan_id,
+                found: 2,
+                supported: 1
+            } if scan_id == "scan-artifact-v2"
+        ));
+    }
+
+    #[test]
+    fn database_and_embedded_artifact_versions_must_agree() {
+        let (_directory, path) = temporary_database_path();
+        let store = StageHistoryStore::open(path).expect("database initializes");
+        store
+            .save_scan(&record_fixture(
+                "scan-version-mismatch",
+                "2026-07-15T10:00:00.000Z",
+            ))
+            .expect("record saves");
+        store
+            .connection
+            .lock()
+            .expect("connection lock")
+            .execute(
+                "UPDATE stage_history SET artifact_schema_version = 2 WHERE scan_id = ?1",
+                ["scan-version-mismatch"],
+            )
+            .expect("updates test fixture");
+
+        let error = store
+            .read_scan("scan-version-mismatch")
+            .expect_err("mismatched versions must fail");
+
+        assert!(matches!(
+            error,
+            StageHistoryError::ArtifactSchemaVersionMismatch {
+                ref scan_id,
+                database_version: 2,
+                embedded_version: 1
+            } if scan_id == "scan-version-mismatch"
+        ));
+    }
+
+    #[test]
+    fn unsupported_embedded_artifact_schema_returns_a_controlled_error() {
+        let (_directory, path) = temporary_database_path();
+        let store = StageHistoryStore::open(path).expect("database initializes");
+        store
+            .save_scan(&record_fixture(
+                "scan-unknown-schema",
+                "2026-07-15T10:00:00.000Z",
+            ))
+            .expect("record saves");
+        let mut artifacts = serde_json::to_value(artifact_fixture(None)).expect("serializes");
+        artifacts["schema_version"] = json!("unknown-artifact-schema");
+        store
+            .connection
+            .lock()
+            .expect("connection lock")
+            .execute(
+                "UPDATE stage_history SET artifacts_json = ?1 WHERE scan_id = ?2",
+                params![artifacts.to_string(), "scan-unknown-schema"],
+            )
+            .expect("updates test fixture");
+
+        let error = store
+            .read_scan("scan-unknown-schema")
+            .expect_err("unsupported embedded schema must fail");
+
+        assert!(matches!(
+            error,
+            StageHistoryError::UnsupportedEmbeddedArtifactSchema { ref scan_id }
+                if scan_id == "scan-unknown-schema"
+        ));
+    }
+
+    #[test]
+    fn explicitly_redacted_fixture_round_trips_without_the_original_secret() {
+        const ORIGINAL_SECRET: &str = "sk-original-secret-fixture";
+        let (_directory, path) = temporary_database_path();
+        let store = StageHistoryStore::open(path).expect("database initializes");
+        let record = record_fixture("scan-redacted", "2026-07-15T10:00:00.000Z");
+        assert!(!record
+            .artifacts
+            .redacted_stage_payload
+            .to_string()
+            .contains(ORIGINAL_SECRET));
+
+        store.save_scan(&record).expect("record saves");
+        let raw_artifacts: String = store
+            .connection
+            .lock()
+            .expect("connection lock")
+            .query_row(
+                "SELECT artifacts_json FROM stage_history WHERE scan_id = ?1",
+                ["scan-redacted"],
+                |row| row.get(0),
+            )
+            .expect("reads raw artifacts");
+        let stored = store
+            .read_scan("scan-redacted")
+            .expect("record reads")
+            .expect("record exists");
+
+        assert_eq!(stored.artifacts, record.artifacts);
+        assert!(raw_artifacts.contains("[REDACTED]"));
+        assert!(!raw_artifacts.contains(ORIGINAL_SECRET));
+    }
+
+    #[test]
+    fn artifact_envelope_has_no_dedicated_disallowed_storage_fields() {
+        let serialized = serde_json::to_value(artifact_fixture(None)).expect("serializes");
+        let keys = serialized.as_object().expect("artifact is an object");
+
+        for disallowed in [
+            "original_stage_payload",
+            "unredacted_stage_payload",
+            "api_keys",
+            "provider_secret_values",
+            "environment_variable_values",
+            "repository_contents",
+            "raw_secret_values",
+        ] {
+            assert!(!keys.contains_key(disallowed));
+        }
     }
 }
