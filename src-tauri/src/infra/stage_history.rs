@@ -1,10 +1,10 @@
 use std::error::Error;
 use std::fmt;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
 use std::time::Duration;
 
-use rusqlite::Connection;
+use rusqlite::{params, Connection, ErrorCode, OptionalExtension, Row};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -55,6 +55,21 @@ pub enum StageHistoryError {
         found: i32,
         supported: i32,
     },
+    ConnectionMutexPoisoned,
+    DatabaseOperation {
+        operation: &'static str,
+        source: rusqlite::Error,
+    },
+    ArtifactSerialization {
+        source: serde_json::Error,
+    },
+    DuplicateScanId {
+        scan_id: String,
+    },
+    InvalidStoredRecord {
+        scan_id: String,
+        field: &'static str,
+    },
 }
 
 impl fmt::Display for StageHistoryError {
@@ -74,6 +89,22 @@ impl fmt::Display for StageHistoryError {
                 formatter,
                 "Stage History database schema version {found} is newer than supported version {supported}"
             ),
+            Self::ConnectionMutexPoisoned => {
+                write!(formatter, "Stage History database connection is unavailable")
+            }
+            Self::DatabaseOperation { operation, source } => {
+                write!(formatter, "Stage History {operation} failed: {source}")
+            }
+            Self::ArtifactSerialization { source } => {
+                write!(formatter, "failed to serialize Stage History artifacts: {source}")
+            }
+            Self::DuplicateScanId { scan_id } => {
+                write!(formatter, "Stage History scan ID already exists: {scan_id}")
+            }
+            Self::InvalidStoredRecord { scan_id, field } => write!(
+                formatter,
+                "Stage History record {scan_id} has an invalid {field} field"
+            ),
         }
     }
 }
@@ -84,7 +115,12 @@ impl Error for StageHistoryError {
             Self::DatabaseOpen { source, .. } | Self::DatabaseInitialization { source, .. } => {
                 Some(source)
             }
-            Self::UnsupportedDatabaseSchema { .. } => None,
+            Self::DatabaseOperation { source, .. } => Some(source),
+            Self::ArtifactSerialization { source } => Some(source),
+            Self::UnsupportedDatabaseSchema { .. }
+            | Self::ConnectionMutexPoisoned
+            | Self::DuplicateScanId { .. }
+            | Self::InvalidStoredRecord { .. } => None,
         }
     }
 }
@@ -112,6 +148,140 @@ impl StageHistoryStore {
         Ok(Self {
             connection: Mutex::new(connection),
         })
+    }
+
+    pub fn save_scan(&self, record: &NewStageHistoryRecord) -> Result<(), StageHistoryError> {
+        let artifacts_json = serde_json::to_string(&record.artifacts)
+            .map_err(|source| StageHistoryError::ArtifactSerialization { source })?;
+        let connection = self.lock_connection()?;
+        let result = connection.execute(
+            "INSERT INTO stage_history (
+                scan_id, repo_path, repo_name, branch, diff_hash, created_at,
+                changed_file_count, selected_file_path, safety_gate_status,
+                estimated_tokens, report_generation_mode, report_status,
+                recommendation_decision, artifact_schema_version, artifacts_json
+            ) VALUES (
+                ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15
+            )",
+            params![
+                record.scan_id,
+                record.repo_path,
+                record.repo_name,
+                record.branch,
+                record.diff_hash,
+                record.created_at,
+                record.changed_file_count,
+                record.selected_file_path,
+                record.safety_gate_status.as_str(),
+                record.estimated_tokens,
+                record.report_generation_mode.as_str(),
+                record.report_status.as_str(),
+                record.recommendation_decision.as_str(),
+                ArtifactSchemaVersion::V1.database_version(),
+                artifacts_json,
+            ],
+        );
+
+        match result {
+            Ok(_) => Ok(()),
+            Err(rusqlite::Error::SqliteFailure(error, _))
+                if error.code == ErrorCode::ConstraintViolation
+                    && error.extended_code == rusqlite::ffi::SQLITE_CONSTRAINT_PRIMARYKEY =>
+            {
+                Err(StageHistoryError::DuplicateScanId {
+                    scan_id: record.scan_id.clone(),
+                })
+            }
+            Err(source) => Err(StageHistoryError::DatabaseOperation {
+                operation: "save",
+                source,
+            }),
+        }
+    }
+
+    pub fn list_scans(&self) -> Result<Vec<StageHistorySummary>, StageHistoryError> {
+        let connection = self.lock_connection()?;
+        let mut statement = connection
+            .prepare(
+                "SELECT
+                    scan_id, repo_path, repo_name, branch, diff_hash, created_at,
+                    changed_file_count, selected_file_path, safety_gate_status,
+                    estimated_tokens, report_generation_mode, report_status,
+                    recommendation_decision, artifact_schema_version
+                 FROM stage_history
+                 ORDER BY created_at DESC, scan_id DESC",
+            )
+            .map_err(|source| StageHistoryError::DatabaseOperation {
+                operation: "list preparation",
+                source,
+            })?;
+        let rows = statement
+            .query_map([], read_summary_row)
+            .map_err(|source| StageHistoryError::DatabaseOperation {
+                operation: "list query",
+                source,
+            })?;
+
+        rows.map(|row| {
+            row.map_err(|source| StageHistoryError::DatabaseOperation {
+                operation: "list row decoding",
+                source,
+            })
+            .and_then(StageHistorySummary::try_from_raw)
+        })
+        .collect()
+    }
+
+    pub fn read_scan(
+        &self,
+        scan_id: &str,
+    ) -> Result<Option<StageHistoryRecord>, StageHistoryError> {
+        let connection = self.lock_connection()?;
+        let raw = connection
+            .query_row(
+                "SELECT
+                    scan_id, repo_path, repo_name, branch, diff_hash, created_at,
+                    changed_file_count, selected_file_path, safety_gate_status,
+                    estimated_tokens, report_generation_mode, report_status,
+                    recommendation_decision, artifact_schema_version, artifacts_json
+                 FROM stage_history
+                 WHERE scan_id = ?1",
+                [scan_id],
+                read_record_row,
+            )
+            .optional()
+            .map_err(|source| StageHistoryError::DatabaseOperation {
+                operation: "read",
+                source,
+            })?;
+
+        raw.map(StageHistoryRecord::try_from_raw).transpose()
+    }
+
+    pub fn delete_scan(&self, scan_id: &str) -> Result<bool, StageHistoryError> {
+        let deleted = self
+            .lock_connection()?
+            .execute("DELETE FROM stage_history WHERE scan_id = ?1", [scan_id])
+            .map_err(|source| StageHistoryError::DatabaseOperation {
+                operation: "delete",
+                source,
+            })?;
+        Ok(deleted > 0)
+    }
+
+    pub fn clear_history(&self) -> Result<usize, StageHistoryError> {
+        self.lock_connection()?
+            .execute("DELETE FROM stage_history", [])
+            .map_err(|source| StageHistoryError::DatabaseOperation {
+                operation: "clear",
+                source,
+            })
+    }
+
+    fn lock_connection(&self) -> Result<MutexGuard<'_, Connection>, StageHistoryError> {
+        self.connection
+            .lock()
+            .map_err(|_| StageHistoryError::ConnectionMutexPoisoned)
     }
 }
 
@@ -166,12 +336,39 @@ pub enum ArtifactSchemaVersion {
     V1,
 }
 
+impl ArtifactSchemaVersion {
+    fn database_version(self) -> i32 {
+        match self {
+            Self::V1 => 1,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SafetyGateStatus {
     Pass,
     Warning,
     Blocked,
+}
+
+impl SafetyGateStatus {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Pass => "pass",
+            Self::Warning => "warning",
+            Self::Blocked => "blocked",
+        }
+    }
+
+    fn from_str(value: &str) -> Option<Self> {
+        match value {
+            "pass" => Some(Self::Pass),
+            "warning" => Some(Self::Warning),
+            "blocked" => Some(Self::Blocked),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -181,11 +378,45 @@ pub enum ReportGenerationMode {
     AiGenerated,
 }
 
+impl ReportGenerationMode {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::LocalPreview => "local_preview",
+            Self::AiGenerated => "ai_generated",
+        }
+    }
+
+    fn from_str(value: &str) -> Option<Self> {
+        match value {
+            "local_preview" => Some(Self::LocalPreview),
+            "ai_generated" => Some(Self::AiGenerated),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ReportStatus {
     PreviewOnly,
     Complete,
+}
+
+impl ReportStatus {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::PreviewOnly => "preview_only",
+            Self::Complete => "complete",
+        }
+    }
+
+    fn from_str(value: &str) -> Option<Self> {
+        match value {
+            "preview_only" => Some(Self::PreviewOnly),
+            "complete" => Some(Self::Complete),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -194,6 +425,25 @@ pub enum RecommendationDecision {
     ReviewManually,
     DoNotSubmit,
     ReadyForFutureAiReview,
+}
+
+impl RecommendationDecision {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::ReviewManually => "review_manually",
+            Self::DoNotSubmit => "do_not_submit",
+            Self::ReadyForFutureAiReview => "ready_for_future_ai_review",
+        }
+    }
+
+    fn from_str(value: &str) -> Option<Self> {
+        match value {
+            "review_manually" => Some(Self::ReviewManually),
+            "do_not_submit" => Some(Self::DoNotSubmit),
+            "ready_for_future_ai_review" => Some(Self::ReadyForFutureAiReview),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -208,6 +458,187 @@ pub struct StageHistoryArtifactsV1 {
     pub markdown_export: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct NewStageHistoryRecord {
+    pub scan_id: String,
+    pub repo_path: String,
+    pub repo_name: String,
+    pub branch: Option<String>,
+    pub diff_hash: String,
+    pub created_at: String,
+    pub changed_file_count: i64,
+    pub selected_file_path: Option<String>,
+    pub safety_gate_status: SafetyGateStatus,
+    pub estimated_tokens: Option<i64>,
+    pub report_generation_mode: ReportGenerationMode,
+    pub report_status: ReportStatus,
+    pub recommendation_decision: RecommendationDecision,
+    pub artifacts: StageHistoryArtifactsV1,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StageHistorySummary {
+    pub scan_id: String,
+    pub repo_path: String,
+    pub repo_name: String,
+    pub branch: Option<String>,
+    pub diff_hash: String,
+    pub created_at: String,
+    pub changed_file_count: i64,
+    pub selected_file_path: Option<String>,
+    pub safety_gate_status: SafetyGateStatus,
+    pub estimated_tokens: Option<i64>,
+    pub report_generation_mode: ReportGenerationMode,
+    pub report_status: ReportStatus,
+    pub recommendation_decision: RecommendationDecision,
+    pub artifact_schema_version: i32,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StageHistoryRecord {
+    pub scan_id: String,
+    pub repo_path: String,
+    pub repo_name: String,
+    pub branch: Option<String>,
+    pub diff_hash: String,
+    pub created_at: String,
+    pub changed_file_count: i64,
+    pub selected_file_path: Option<String>,
+    pub safety_gate_status: SafetyGateStatus,
+    pub estimated_tokens: Option<i64>,
+    pub report_generation_mode: ReportGenerationMode,
+    pub report_status: ReportStatus,
+    pub recommendation_decision: RecommendationDecision,
+    pub artifact_schema_version: i32,
+    pub artifacts: StageHistoryArtifactsV1,
+}
+
+struct RawStageHistorySummary {
+    scan_id: String,
+    repo_path: String,
+    repo_name: String,
+    branch: Option<String>,
+    diff_hash: String,
+    created_at: String,
+    changed_file_count: i64,
+    selected_file_path: Option<String>,
+    safety_gate_status: String,
+    estimated_tokens: Option<i64>,
+    report_generation_mode: String,
+    report_status: String,
+    recommendation_decision: String,
+    artifact_schema_version: i32,
+}
+
+struct RawStageHistoryRecord {
+    summary: RawStageHistorySummary,
+    artifacts_json: String,
+}
+
+impl StageHistorySummary {
+    fn try_from_raw(raw: RawStageHistorySummary) -> Result<Self, StageHistoryError> {
+        let scan_id = raw.scan_id;
+        let safety_gate_status =
+            SafetyGateStatus::from_str(&raw.safety_gate_status).ok_or_else(|| {
+                StageHistoryError::InvalidStoredRecord {
+                    scan_id: scan_id.clone(),
+                    field: "safety_gate_status",
+                }
+            })?;
+        let report_generation_mode = ReportGenerationMode::from_str(&raw.report_generation_mode)
+            .ok_or_else(|| StageHistoryError::InvalidStoredRecord {
+                scan_id: scan_id.clone(),
+                field: "report_generation_mode",
+            })?;
+        let report_status = ReportStatus::from_str(&raw.report_status).ok_or_else(|| {
+            StageHistoryError::InvalidStoredRecord {
+                scan_id: scan_id.clone(),
+                field: "report_status",
+            }
+        })?;
+        let recommendation_decision =
+            RecommendationDecision::from_str(&raw.recommendation_decision).ok_or_else(|| {
+                StageHistoryError::InvalidStoredRecord {
+                    scan_id: scan_id.clone(),
+                    field: "recommendation_decision",
+                }
+            })?;
+
+        Ok(Self {
+            scan_id,
+            repo_path: raw.repo_path,
+            repo_name: raw.repo_name,
+            branch: raw.branch,
+            diff_hash: raw.diff_hash,
+            created_at: raw.created_at,
+            changed_file_count: raw.changed_file_count,
+            selected_file_path: raw.selected_file_path,
+            safety_gate_status,
+            estimated_tokens: raw.estimated_tokens,
+            report_generation_mode,
+            report_status,
+            recommendation_decision,
+            artifact_schema_version: raw.artifact_schema_version,
+        })
+    }
+}
+
+impl StageHistoryRecord {
+    fn try_from_raw(raw: RawStageHistoryRecord) -> Result<Self, StageHistoryError> {
+        let artifacts = serde_json::from_str(&raw.artifacts_json).map_err(|_| {
+            StageHistoryError::InvalidStoredRecord {
+                scan_id: raw.summary.scan_id.clone(),
+                field: "artifacts_json",
+            }
+        })?;
+        let summary = StageHistorySummary::try_from_raw(raw.summary)?;
+
+        Ok(Self {
+            scan_id: summary.scan_id,
+            repo_path: summary.repo_path,
+            repo_name: summary.repo_name,
+            branch: summary.branch,
+            diff_hash: summary.diff_hash,
+            created_at: summary.created_at,
+            changed_file_count: summary.changed_file_count,
+            selected_file_path: summary.selected_file_path,
+            safety_gate_status: summary.safety_gate_status,
+            estimated_tokens: summary.estimated_tokens,
+            report_generation_mode: summary.report_generation_mode,
+            report_status: summary.report_status,
+            recommendation_decision: summary.recommendation_decision,
+            artifact_schema_version: summary.artifact_schema_version,
+            artifacts,
+        })
+    }
+}
+
+fn read_summary_row(row: &Row<'_>) -> rusqlite::Result<RawStageHistorySummary> {
+    Ok(RawStageHistorySummary {
+        scan_id: row.get(0)?,
+        repo_path: row.get(1)?,
+        repo_name: row.get(2)?,
+        branch: row.get(3)?,
+        diff_hash: row.get(4)?,
+        created_at: row.get(5)?,
+        changed_file_count: row.get(6)?,
+        selected_file_path: row.get(7)?,
+        safety_gate_status: row.get(8)?,
+        estimated_tokens: row.get(9)?,
+        report_generation_mode: row.get(10)?,
+        report_status: row.get(11)?,
+        recommendation_decision: row.get(12)?,
+        artifact_schema_version: row.get(13)?,
+    })
+}
+
+fn read_record_row(row: &Row<'_>) -> rusqlite::Result<RawStageHistoryRecord> {
+    Ok(RawStageHistoryRecord {
+        summary: read_summary_row(row)?,
+        artifacts_json: row.get(14)?,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
@@ -217,9 +648,9 @@ mod tests {
     use tempfile::TempDir;
 
     use super::{
-        ArtifactSchemaVersion, RecommendationDecision, ReportGenerationMode, ReportStatus,
-        SafetyGateStatus, StageHistoryArtifactsV1, StageHistoryError, StageHistoryStore,
-        DATABASE_SCHEMA_VERSION,
+        ArtifactSchemaVersion, NewStageHistoryRecord, RecommendationDecision, ReportGenerationMode,
+        ReportStatus, SafetyGateStatus, StageHistoryArtifactsV1, StageHistoryError,
+        StageHistoryStore, DATABASE_SCHEMA_VERSION,
     };
 
     fn temporary_database_path() -> (TempDir, PathBuf) {
@@ -237,6 +668,25 @@ mod tests {
             safety_gate_result: json!({"status": "pass"}),
             local_stage_report: json!({"schema_version": "stage-report.v1"}),
             markdown_export: markdown_export.map(str::to_owned),
+        }
+    }
+
+    fn record_fixture(scan_id: &str, created_at: &str) -> NewStageHistoryRecord {
+        NewStageHistoryRecord {
+            scan_id: scan_id.to_string(),
+            repo_path: "C:/work/example".to_string(),
+            repo_name: "example".to_string(),
+            branch: Some("main".to_string()),
+            diff_hash: "sha256:shared-diff".to_string(),
+            created_at: created_at.to_string(),
+            changed_file_count: 3,
+            selected_file_path: Some("src/main.rs".to_string()),
+            safety_gate_status: SafetyGateStatus::Pass,
+            estimated_tokens: Some(42),
+            report_generation_mode: ReportGenerationMode::LocalPreview,
+            report_status: ReportStatus::PreviewOnly,
+            recommendation_decision: RecommendationDecision::ReviewManually,
+            artifacts: artifact_fixture(Some("# Stage Report")),
         }
     }
 
@@ -484,5 +934,193 @@ mod tests {
                 supported
             } if found == DATABASE_SCHEMA_VERSION + 1 && supported == DATABASE_SCHEMA_VERSION
         ));
+    }
+
+    #[test]
+    fn saves_and_reads_a_complete_record() {
+        let (_directory, path) = temporary_database_path();
+        let store = StageHistoryStore::open(path).expect("database initializes");
+        let record = record_fixture("scan-complete", "2026-07-15T10:00:00.000Z");
+
+        store.save_scan(&record).expect("record saves");
+        let stored = store
+            .read_scan("scan-complete")
+            .expect("record reads")
+            .expect("record exists");
+
+        assert_eq!(stored.scan_id, record.scan_id);
+        assert_eq!(stored.repo_path, record.repo_path);
+        assert_eq!(stored.repo_name, record.repo_name);
+        assert_eq!(stored.branch, record.branch);
+        assert_eq!(stored.diff_hash, record.diff_hash);
+        assert_eq!(stored.created_at, record.created_at);
+        assert_eq!(stored.changed_file_count, record.changed_file_count);
+        assert_eq!(stored.selected_file_path, record.selected_file_path);
+        assert_eq!(stored.safety_gate_status, record.safety_gate_status);
+        assert_eq!(stored.estimated_tokens, record.estimated_tokens);
+        assert_eq!(stored.report_generation_mode, record.report_generation_mode);
+        assert_eq!(stored.report_status, record.report_status);
+        assert_eq!(
+            stored.recommendation_decision,
+            record.recommendation_decision
+        );
+        assert_eq!(stored.artifact_schema_version, 1);
+        assert_eq!(stored.artifacts, record.artifacts);
+    }
+
+    #[test]
+    fn nullable_record_fields_round_trip_as_none() {
+        let (_directory, path) = temporary_database_path();
+        let store = StageHistoryStore::open(path).expect("database initializes");
+        let mut record = record_fixture("scan-nullable", "2026-07-15T10:00:00.000Z");
+        record.branch = None;
+        record.selected_file_path = None;
+        record.estimated_tokens = None;
+        record.artifacts.markdown_export = None;
+
+        store.save_scan(&record).expect("record saves");
+        let stored = store
+            .read_scan("scan-nullable")
+            .expect("record reads")
+            .expect("record exists");
+
+        assert_eq!(stored.branch, None);
+        assert_eq!(stored.selected_file_path, None);
+        assert_eq!(stored.estimated_tokens, None);
+        assert_eq!(stored.artifacts.markdown_export, None);
+    }
+
+    #[test]
+    fn lists_newest_first_with_scan_id_as_the_stable_tiebreaker() {
+        let (_directory, path) = temporary_database_path();
+        let store = StageHistoryStore::open(path).expect("database initializes");
+        store
+            .save_scan(&record_fixture("scan-a", "2026-07-15T10:00:00.000Z"))
+            .expect("first record saves");
+        store
+            .save_scan(&record_fixture("scan-b", "2026-07-15T10:00:00.000Z"))
+            .expect("second record saves");
+        store
+            .save_scan(&record_fixture("scan-new", "2026-07-15T11:00:00.000Z"))
+            .expect("newest record saves");
+
+        let scan_ids = store
+            .list_scans()
+            .expect("records list")
+            .into_iter()
+            .map(|record| record.scan_id)
+            .collect::<Vec<_>>();
+
+        assert_eq!(scan_ids, vec!["scan-new", "scan-b", "scan-a"]);
+    }
+
+    #[test]
+    fn summary_listing_does_not_deserialize_artifact_json() {
+        let (_directory, path) = temporary_database_path();
+        let store = StageHistoryStore::open(path).expect("database initializes");
+        store
+            .save_scan(&record_fixture(
+                "scan-malformed",
+                "2026-07-15T10:00:00.000Z",
+            ))
+            .expect("record saves");
+        store
+            .connection
+            .lock()
+            .expect("connection lock")
+            .execute(
+                "UPDATE stage_history SET artifacts_json = 'not-json' WHERE scan_id = ?1",
+                ["scan-malformed"],
+            )
+            .expect("corrupts test fixture");
+
+        let summaries = store.list_scans().expect("summary list succeeds");
+
+        assert_eq!(summaries.len(), 1);
+        assert_eq!(summaries[0].scan_id, "scan-malformed");
+        assert_eq!(summaries[0].artifact_schema_version, 1);
+    }
+
+    #[test]
+    fn duplicate_scan_id_returns_a_controlled_error_without_replacing_the_record() {
+        let (_directory, path) = temporary_database_path();
+        let store = StageHistoryStore::open(path).expect("database initializes");
+        let original = record_fixture("scan-duplicate", "2026-07-15T10:00:00.000Z");
+        let mut duplicate = record_fixture("scan-duplicate", "2026-07-15T11:00:00.000Z");
+        duplicate.repo_name = "replacement-must-not-win".to_string();
+        store.save_scan(&original).expect("original saves");
+
+        let error = store
+            .save_scan(&duplicate)
+            .expect_err("duplicate must be rejected");
+
+        assert!(matches!(
+            error,
+            StageHistoryError::DuplicateScanId { ref scan_id } if scan_id == "scan-duplicate"
+        ));
+        let stored = store
+            .read_scan("scan-duplicate")
+            .expect("record reads")
+            .expect("record exists");
+        assert_eq!(stored.repo_name, original.repo_name);
+        assert_eq!(stored.created_at, original.created_at);
+    }
+
+    #[test]
+    fn reading_a_missing_scan_returns_none() {
+        let (_directory, path) = temporary_database_path();
+        let store = StageHistoryStore::open(path).expect("database initializes");
+
+        assert_eq!(store.read_scan("missing").expect("read succeeds"), None);
+    }
+
+    #[test]
+    fn deleting_an_existing_scan_returns_true() {
+        let (_directory, path) = temporary_database_path();
+        let store = StageHistoryStore::open(path).expect("database initializes");
+        store
+            .save_scan(&record_fixture("scan-delete", "2026-07-15T10:00:00.000Z"))
+            .expect("record saves");
+
+        assert!(store.delete_scan("scan-delete").expect("delete succeeds"));
+        assert_eq!(store.read_scan("scan-delete").expect("read succeeds"), None);
+    }
+
+    #[test]
+    fn deleting_a_missing_scan_returns_false() {
+        let (_directory, path) = temporary_database_path();
+        let store = StageHistoryStore::open(path).expect("database initializes");
+
+        assert!(!store.delete_scan("missing").expect("delete succeeds"));
+    }
+
+    #[test]
+    fn clearing_history_returns_the_number_of_deleted_records() {
+        let (_directory, path) = temporary_database_path();
+        let store = StageHistoryStore::open(path).expect("database initializes");
+        store
+            .save_scan(&record_fixture("scan-1", "2026-07-15T10:00:00.000Z"))
+            .expect("first record saves");
+        store
+            .save_scan(&record_fixture("scan-2", "2026-07-15T11:00:00.000Z"))
+            .expect("second record saves");
+
+        assert_eq!(store.clear_history().expect("clear succeeds"), 2);
+        assert!(store.list_scans().expect("list succeeds").is_empty());
+        assert_eq!(store.clear_history().expect("second clear succeeds"), 0);
+    }
+
+    #[test]
+    fn repeated_diff_hash_values_are_allowed() {
+        let (_directory, path) = temporary_database_path();
+        let store = StageHistoryStore::open(path).expect("database initializes");
+        let first = record_fixture("scan-first", "2026-07-15T10:00:00.000Z");
+        let second = record_fixture("scan-second", "2026-07-15T11:00:00.000Z");
+        assert_eq!(first.diff_hash, second.diff_hash);
+
+        store.save_scan(&first).expect("first record saves");
+        store.save_scan(&second).expect("second record saves");
+
+        assert_eq!(store.list_scans().expect("list succeeds").len(), 2);
     }
 }
