@@ -3,6 +3,7 @@ mod commands {
     pub mod git_status;
     pub mod repo;
     pub mod repo_command;
+    pub mod stage_history;
 }
 
 mod infra {
@@ -31,7 +32,8 @@ pub fn run() {
             commands::git_status::list_changed_files,
             commands::repo::inspect_repo,
             commands::repo_command::get_available_repo_commands,
-            commands::repo_command::run_repo_command
+            commands::repo_command::run_repo_command,
+            commands::stage_history::save_stage_history_scan
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
