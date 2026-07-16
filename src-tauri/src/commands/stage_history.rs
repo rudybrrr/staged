@@ -159,6 +159,22 @@ fn validate_input(input: &SaveStageHistoryScanInput) -> Result<(), SaveStageHist
         &input.artifacts.local_stage_report,
         &["recommendation", "decision"],
     );
+    let report_changed_file_count = nested_i64(
+        &input.artifacts.local_stage_report,
+        &["summary", "changed_file_count"],
+    );
+    let report_selected_file_path = nested_optional_string(
+        &input.artifacts.local_stage_report,
+        &["summary", "selected_file_path"],
+    )?;
+    let report_safety_status = nested_string(
+        &input.artifacts.local_stage_report,
+        &["deterministic_evidence", "safety_gate_status"],
+    );
+    let report_estimated_tokens = nested_i64(
+        &input.artifacts.local_stage_report,
+        &["deterministic_evidence", "token_budget_estimated_tokens"],
+    );
     let serialized_safety_status = enum_string(input.safety_gate_status)?;
     let serialized_generation_mode = enum_string(input.report_generation_mode)?;
     let serialized_report_status = enum_string(input.report_status)?;
@@ -171,6 +187,10 @@ fn validate_input(input: &SaveStageHistoryScanInput) -> Result<(), SaveStageHist
         || report_generation_mode != Some(serialized_generation_mode.as_str())
         || report_status != Some(serialized_report_status.as_str())
         || recommendation_decision != Some(serialized_recommendation.as_str())
+        || report_changed_file_count != Some(input.changed_file_count)
+        || report_selected_file_path.as_deref() != input.selected_file_path.as_deref()
+        || report_safety_status != Some(serialized_safety_status.as_str())
+        || report_estimated_tokens != Some(input.estimated_tokens)
     {
         return Err(invalid());
     }
@@ -637,6 +657,27 @@ mod tests {
         let mut input = input_fixture(SafetyGateStatus::Pass);
         input.artifacts.pre_stage_screening_findings = vec![];
 
+        assert_invalid(input);
+    }
+
+    #[test]
+    fn mirrored_report_metadata_must_match_the_save_input() {
+        let mut input = input_fixture(SafetyGateStatus::Pass);
+        input.artifacts.local_stage_report["summary"]["changed_file_count"] = json!(3);
+        assert_invalid(input);
+
+        let mut input = input_fixture(SafetyGateStatus::Pass);
+        input.artifacts.local_stage_report["summary"]["selected_file_path"] = json!("other.ts");
+        assert_invalid(input);
+
+        let mut input = input_fixture(SafetyGateStatus::Pass);
+        input.artifacts.local_stage_report["deterministic_evidence"]["safety_gate_status"] =
+            json!("warning");
+        assert_invalid(input);
+
+        let mut input = input_fixture(SafetyGateStatus::Pass);
+        input.artifacts.local_stage_report["deterministic_evidence"]
+            ["token_budget_estimated_tokens"] = json!(101);
         assert_invalid(input);
     }
 
