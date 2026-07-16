@@ -183,7 +183,7 @@ pub enum StageHistoryInitializationError {
     },
     Database {
         path: PathBuf,
-        source: StageHistoryError,
+        source: Box<StageHistoryError>,
     },
     ManagedStateAlreadyRegistered,
 }
@@ -406,7 +406,7 @@ fn initialize_store_in_app_data_dir(
     StageHistoryStore::open(&database_path).map_err(|source| {
         StageHistoryInitializationError::Database {
             path: database_path,
-            source,
+            source: Box::new(source),
         }
     })
 }
