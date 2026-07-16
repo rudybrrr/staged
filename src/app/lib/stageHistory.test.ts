@@ -282,7 +282,9 @@ describe("buildStageHistorySaveInput", () => {
   });
 
   test("derives persisted screening and mirrored report fields from the redacted payload", async () => {
-    const result = await buildStageHistorySaveInput(snapshotInput(), runtimeFixture());
+    const input = snapshotInput();
+    input.local_stage_report.missing_evidence = [ORIGINAL_SECRET];
+    const result = await buildStageHistorySaveInput(input, runtimeFixture());
     const redacted = redactedPayloadFixture();
 
     expect(result.artifacts.pre_stage_screening_findings).toEqual(
@@ -300,6 +302,12 @@ describe("buildStageHistorySaveInput", () => {
     expect(
       result.artifacts.local_stage_report.deterministic_evidence.payload_limitations,
     ).toEqual(redacted.payload_completeness.limitations);
+    expect(result.artifacts.local_stage_report.missing_evidence).toContain(
+      redacted.payload_completeness.limitations[0],
+    );
+    expect(result.artifacts.local_stage_report.missing_evidence).not.toContain(
+      ORIGINAL_SECRET,
+    );
   });
 
   test("constructs a Safety Gate summary without the redacted preview or injected raw fields", async () => {

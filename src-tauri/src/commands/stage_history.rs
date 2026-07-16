@@ -64,10 +64,17 @@ impl SaveStageHistoryScanError {
 
 #[tauri::command]
 pub fn save_stage_history_scan(
-    input: SaveStageHistoryScanInput,
+    input: Value,
     store: State<'_, StageHistoryStore>,
 ) -> Result<SaveStageHistoryScanResult, SaveStageHistoryScanError> {
+    let input = deserialize_save_input(input)?;
     save_stage_history_scan_with_store(&store, input)
+}
+
+fn deserialize_save_input(
+    input: Value,
+) -> Result<SaveStageHistoryScanInput, SaveStageHistoryScanError> {
+    serde_json::from_value(input).map_err(|_| SaveStageHistoryScanError::invalid_input())
 }
 
 fn save_stage_history_scan_with_store(
@@ -382,7 +389,8 @@ mod tests {
     };
 
     use super::{
-        save_stage_history_scan_with_store, SaveStageHistoryScanError, SaveStageHistoryScanInput,
+        deserialize_save_input, save_stage_history_scan_with_store, SaveStageHistoryScanError,
+        SaveStageHistoryScanInput,
     };
 
     fn temporary_store() -> (TempDir, StageHistoryStore) {
@@ -597,17 +605,26 @@ mod tests {
         let mut serialized =
             serde_json::to_value(input_fixture(SafetyGateStatus::Pass)).expect("input serializes");
         serialized["unexpected"] = json!(true);
-        assert!(serde_json::from_value::<SaveStageHistoryScanInput>(serialized).is_err());
+        assert!(matches!(
+            deserialize_save_input(serialized),
+            Err(SaveStageHistoryScanError::InvalidInput { .. })
+        ));
 
         let mut serialized =
             serde_json::to_value(input_fixture(SafetyGateStatus::Pass)).expect("input serializes");
         serialized["artifacts"]["unexpected"] = json!(true);
-        assert!(serde_json::from_value::<SaveStageHistoryScanInput>(serialized).is_err());
+        assert!(matches!(
+            deserialize_save_input(serialized),
+            Err(SaveStageHistoryScanError::InvalidInput { .. })
+        ));
 
         let mut serialized =
             serde_json::to_value(input_fixture(SafetyGateStatus::Pass)).expect("input serializes");
         serialized["artifacts"]["schema_version"] = json!("stage-history-artifacts.v2");
-        assert!(serde_json::from_value::<SaveStageHistoryScanInput>(serialized).is_err());
+        assert!(matches!(
+            deserialize_save_input(serialized),
+            Err(SaveStageHistoryScanError::InvalidInput { .. })
+        ));
     }
 
     #[test]

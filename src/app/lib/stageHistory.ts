@@ -516,6 +516,27 @@ function buildPersistedStageReport(
   safetyGateResult: PersistedSafetyGateResultV1,
 ): PersistedLocalStageReportV1 {
   const commandResult = redactedPayload.command_result;
+  const missingEvidence = [
+    ...redactedPayload.payload_completeness.limitations,
+  ];
+  if (!redactedPayload.payload_completeness.includes_selected_file_diff) {
+    missingEvidence.push("Selected file diff is missing.");
+  }
+  if (!redactedPayload.payload_completeness.command_result_included) {
+    missingEvidence.push("No command result is included.");
+  }
+  if (
+    redactedPayload.payload_completeness
+      .untracked_files_without_content_count > 0
+  ) {
+    missingEvidence.push(
+      `${redactedPayload.payload_completeness.untracked_files_without_content_count} untracked file(s) are listed without file content.`,
+    );
+  }
+  missingEvidence.push(
+    "No AI judgment has been generated.",
+    "This report is not saved automatically; use Save to Stage History explicitly.",
+  );
 
   return {
     schema_version: localStageReport.schema_version,
@@ -560,7 +581,7 @@ function buildPersistedStageReport(
       detail: finding.detail,
       source: finding.source,
     })),
-    missing_evidence: localStageReport.missing_evidence.map((item) => item),
+    missing_evidence: [...new Set(missingEvidence)],
     human_review_checklist: localStageReport.human_review_checklist.map(
       (item) => item,
     ),
