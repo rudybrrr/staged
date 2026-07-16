@@ -610,22 +610,9 @@ function buildBoundedDiffHashInput(
       is_unstaged: file.is_unstaged,
       is_untracked: file.is_untracked,
     }))
-    .sort((left, right) => {
-      const filePathOrder = compareText(left.file_path, right.file_path);
-      if (filePathOrder !== 0) {
-        return filePathOrder;
-      }
-
-      const oldPathOrder = compareText(
-        left.old_file_path ?? "",
-        right.old_file_path ?? "",
-      );
-      if (oldPathOrder !== 0) {
-        return oldPathOrder;
-      }
-
-      return compareText(left.status, right.status);
-    });
+    .sort((left, right) =>
+      compareText(JSON.stringify(left), JSON.stringify(right)),
+    );
 
   // This intentionally fingerprints only changed-file metadata plus the
   // currently selected redacted diff. It does not cover all changed-file
@@ -667,6 +654,8 @@ export async function buildStageHistorySaveInput(
   input: BuildStageHistorySnapshotInput,
   runtime: StageHistorySnapshotRuntime = defaultRuntime,
 ): Promise<SaveStageHistoryScanInput> {
+  const scanId = `scan_${runtime.randomUuid()}`;
+  const createdAt = runtime.now().toISOString();
   const redactedPayload = parseRedactedStagePayload(
     input.redacted_payload_preview,
   );
@@ -684,12 +673,12 @@ export async function buildStageHistorySaveInput(
   const hash = await runtime.sha256Hex(hashInput);
 
   return {
-    scan_id: `scan_${runtime.randomUuid()}`,
+    scan_id: scanId,
     repo_path: input.repo.repo_path,
     repo_name: input.repo.repo_name,
     branch: input.repo.current_branch,
     diff_hash: `sha256:v1:${hash}`,
-    created_at: runtime.now().toISOString(),
+    created_at: createdAt,
     changed_file_count: redactedPayload.changes.changed_file_count,
     selected_file_path:
       redactedPayload.payload_completeness.selected_file_path,

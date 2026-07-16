@@ -354,6 +354,27 @@ describe("buildStageHistorySaveInput", () => {
     expect(result.created_at).toBe("2026-07-16T12:34:56.789Z");
   });
 
+  test("captures the scan ID and save timestamp before asynchronous hashing", async () => {
+    const calls: string[] = [];
+    const runtime = runtimeFixture();
+    runtime.randomUuid = () => {
+      calls.push("scan_id");
+      return "11111111-1111-4111-8111-111111111111";
+    };
+    runtime.now = () => {
+      calls.push("created_at");
+      return new Date("2026-07-16T12:34:56.789Z");
+    };
+    runtime.sha256Hex = async () => {
+      calls.push("hash");
+      return "a".repeat(64);
+    };
+
+    await buildStageHistorySaveInput(snapshotInput(), runtime);
+
+    expect(calls).toEqual(["scan_id", "created_at", "hash"]);
+  });
+
   test("generates a new scan ID for each explicit snapshot build", async () => {
     const uuids = [
       "11111111-1111-4111-8111-111111111111",
@@ -378,6 +399,31 @@ describe("buildStageHistorySaveInput", () => {
     const second = await buildStageHistorySaveInput(reordered, runtimeFixture());
 
     expect(first.diff_hash).toMatch(/^sha256:v1:[0-9a-f]{64}$/u);
+    expect(second.diff_hash).toBe(first.diff_hash);
+  });
+
+  test("uses every included metadata field as a deterministic sort tiebreaker", async () => {
+    const firstPayload = redactedPayloadFixture();
+    const firstFile = firstPayload.changes.files[0];
+    const secondFile = {
+      ...firstFile,
+      is_staged: true,
+      is_unstaged: false,
+    };
+    firstPayload.changes.files = [firstFile, secondFile];
+
+    const secondPayload = redactedPayloadFixture();
+    secondPayload.changes.files = [secondFile, firstFile];
+
+    const first = await buildStageHistorySaveInput(
+      snapshotInput(safetyGateFixture(firstPayload)),
+      runtimeFixture(),
+    );
+    const second = await buildStageHistorySaveInput(
+      snapshotInput(safetyGateFixture(secondPayload)),
+      runtimeFixture(),
+    );
+
     expect(second.diff_hash).toBe(first.diff_hash);
   });
 
