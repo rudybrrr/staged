@@ -173,7 +173,9 @@ function buildMissingEvidence(
     missingEvidence.push("No AI judgment has been generated.");
   }
 
-  missingEvidence.push("Stage History and report persistence are not implemented.");
+  missingEvidence.push(
+    "This report is not saved automatically; use Save to Stage History explicitly.",
+  );
 
   return uniqueItems(missingEvidence);
 }

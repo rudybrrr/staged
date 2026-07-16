@@ -1,6 +1,8 @@
 # Post-MVP Milestone 15: Stage History Foundation
 
-Status: Post-MVP planned. Stage History and persistence are not implemented.
+Status: In progress. Milestone 15A (SQLite storage foundation) and Milestone 15B
+(explicit save of completed local scans) are implemented. Milestone 15C (history
+browsing) and Milestone 15D (retention and deletion UI) remain pending.
 
 ## MVP Boundary
 
@@ -30,6 +32,8 @@ Schema evolution should start with a small explicit database version or migratio
 
 ### 15A: Persistence schema and storage service
 
+Status: Implemented.
+
 - Initialize the local SQLite database.
 - Establish the initial schema version.
 - Define backend save, list, read, delete, and clear operations.
@@ -37,13 +41,25 @@ Schema evolution should start with a small explicit database version or migratio
 
 ### 15B: Save completed local scans
 
-- Create a stable `scan_id`.
-- Derive a stable `diff_hash` locally from a consistently defined diff input.
+Status: Implemented.
+
+- Create a new `scan_<uuid-v4>` identifier for every explicit save.
+- Derive a versioned SHA-256 `diff_hash` from normalized repository identity,
+  sorted changed-file metadata, and the currently selected redacted diff. This
+  bounded hash does not cover all changed-file content.
 - Save a completed scan only through an explicit user action.
-- Persist the scan metadata and approved historical artifact snapshots atomically where practical.
+- Persist only explicitly allowlisted artifacts constructed from the Safety
+  Gate redacted Stage Payload preview. The original unredacted Stage Payload is
+  never an input to the history snapshot builder.
+- Validate the typed save DTO and persistence contract in the Tauri backend,
+  then save the record through the SQLite storage service.
 - Keep the active in-memory app state usable if a write fails.
+- Allow blocked Safety Gate scans to be saved locally without changing their
+  blocked status or approving provider submission.
 
 ### 15C: Stage History list and detail UI
+
+Status: Pending.
 
 - List saved scans in a compact history view.
 - Read one saved scan and display its evidence and report snapshots.
@@ -52,6 +68,8 @@ Schema evolution should start with a small explicit database version or migratio
 - Provide empty, loading, and controlled error states.
 
 ### 15D: Retention, deletion, and validation pass
+
+Status: Pending.
 
 - Retain saved scans until the user deletes them; do not add automatic expiry in this milestone.
 - Delete one saved scan.
@@ -108,7 +126,7 @@ The presence of a local database does not change the future AI approval boundary
 
 ## Required Behavior
 
-Milestone 15 should define and later implement:
+Milestone 15 defines:
 
 - Local database initialization.
 - Explicit save of a completed local scan.
@@ -120,6 +138,11 @@ Milestone 15 should define and later implement:
 - Empty, loading, and error states.
 
 No automatic background save or synchronization is included.
+
+Milestone 15B exposes only the explicit save action. Although the backend
+storage foundation already has internal list, read, delete, and clear
+operations, frontend history browsing and management remain scoped to 15C and
+15D.
 
 ## Data Integrity and Error Handling
 
@@ -192,30 +215,38 @@ Future Stage Trials may use saved scan records to compare:
 
 Trial definitions, metrics, and results remain later versioned extensions. They are not implemented or stored by Milestone 15.
 
-## Definition of Done
+## Current Delivery Status
 
-- Stage History architecture and scope are documented.
-- SQLite is selected as the intended local store.
-- The recommended initial record and versioned snapshot model is defined.
-- Privacy and redacted-payload-only defaults are explicit.
-- Save, list, read, delete, and clear-all behavior is defined.
-- Historical-state labeling and repository mismatch warnings are defined.
-- RAG and Stage Trials expansion paths are documented without implementation.
-- No AI, RAG, cloud, database, migration, or whole-repository persistence is added by this documentation milestone.
+- 15A initializes the local SQLite database and implements internal save, list,
+  read, delete, and clear storage operations with versioned artifacts.
+- 15B adds one explicit Save to Stage History action and one validated Tauri
+  save command. It never saves automatically.
+- The stored Stage Payload snapshot comes only from the Safety Gate redacted
+  preview. Original payloads, provider readiness, environment-variable values,
+  API-key values, raw secret matches, and whole-repository contents are outside
+  the approved persistence contract.
+- Recursive prohibited-key validation is backend defense in depth; it is not a
+  secret scanner and does not prove that arbitrary JSON is secret-free.
+- 15C history list/detail UI and 15D retention/deletion UI remain pending.
+- No AI calls, RAG, Stage Trials, cloud synchronization, or repository writes
+  are implemented by 15A or 15B.
 
-## Manual Test Plan for Later Implementation
+## Manual Test Plan
 
 - Launch with no database and confirm it initializes.
 - Save a valid completed local scan.
-- Restart the app and confirm the scan remains.
-- Open the saved scan.
-- Confirm the stored Safety Gate and Stage Report match the saved run.
-- Confirm the detail view labels the record as historical and does not claim the repository still matches it.
+- Save the same completed evidence twice and confirm it creates two records with
+  different scan IDs and the same bounded diff hash.
+- Save a blocked Safety Gate result and confirm the success copy preserves the
+  blocked status and does not imply submission approval.
+- Trigger a controlled backend failure and confirm the current verification
+  state remains unchanged.
 - Confirm no API key, provider secret, environment-variable value, or unredacted secret is stored.
-- Delete one saved record.
-- Clear all saved records with confirmation.
 - Confirm repository files are never modified.
 - Confirm malformed or unsupported history data is handled safely.
+
+After 15C and 15D, also verify restart/browsing behavior, historical-state
+labels, single-record deletion, and confirmed clear-all behavior.
 
 ## Notes
 
