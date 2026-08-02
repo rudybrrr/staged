@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import { FileText, ShieldAlert, ShieldCheck } from "lucide-react";
 
 import type { SafetyGateResult } from "../../lib/safetyGate";
+import type { BuildStageHistorySnapshotInput } from "../../lib/stageHistory";
 import type { StagePayload } from "../../lib/stagePayload";
 import type { StageReport } from "../../lib/stageReport";
 import type { StagingGroundReadiness } from "../../lib/stagingGround";
@@ -16,6 +17,7 @@ import {
   type StatusTone,
 } from "../../ui";
 import { SafetyGatePanel } from "../safety-gate/SafetyGatePanel";
+import { StageHistorySavePanel } from "../stage-history/StageHistorySavePanel";
 import { StagePayloadPreviewPanel } from "../stage-payload/StagePayloadPreviewPanel";
 import { StageReportPanel } from "../stage-report/StageReportPanel";
 import { StagingGroundPanel } from "../staging-ground/StagingGroundPanel";
@@ -206,6 +208,8 @@ type ReviewRailPanelProps = {
   onRefreshProviderReadiness: () => void;
   hasValidRepo: boolean;
   pipelineSteps: PipelineStep[];
+  stageHistorySnapshotInput: BuildStageHistorySnapshotInput | null;
+  stageHistoryDisabledReasons: string[];
 };
 
 export function ReviewRailPanel({
@@ -219,12 +223,19 @@ export function ReviewRailPanel({
   onRefreshProviderReadiness,
   hasValidRepo,
   pipelineSteps,
+  stageHistorySnapshotInput,
+  stageHistoryDisabledReasons,
 }: ReviewRailPanelProps) {
   const verdict = deriveVerdict(safetyGateResult, stageReport, stagingGroundReadiness);
 
   return (
     <>
       <VerdictCard verdict={verdict} />
+
+      <StageHistorySavePanel
+        snapshotInput={stageHistorySnapshotInput}
+        disabledReasons={stageHistoryDisabledReasons}
+      />
 
       <PipelineMiniSummary steps={pipelineSteps} />
 

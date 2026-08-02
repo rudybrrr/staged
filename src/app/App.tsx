@@ -26,6 +26,10 @@ import {
 } from "./lib/repo";
 import { buildPreStageFindings } from "./lib/screening";
 import { buildSafetyGateResult } from "./lib/safetyGate";
+import {
+  getStageHistorySaveDisabledReasons,
+  type BuildStageHistorySnapshotInput,
+} from "./lib/stageHistory";
 import { buildLocalStageReportPreview } from "./lib/stageReport";
 import { buildStagePayload } from "./lib/stagePayload";
 import { buildStagingGroundReadiness } from "./lib/stagingGround";
@@ -204,6 +208,58 @@ export default function App() {
         stagingGroundReadiness,
       }),
     [safetyGateResult, stagePayload, stagingGroundReadiness, tokenBudget],
+  );
+  const stageHistorySnapshotInput: BuildStageHistorySnapshotInput | null =
+    useMemo(() => {
+      if (
+        !repoSummary?.is_git_repo ||
+        !tokenBudget ||
+        !safetyGateResult ||
+        !stageReport
+      ) {
+        return null;
+      }
+
+      return {
+        repo: {
+          repo_path: repoSummary.repo_path,
+          repo_name: repoSummary.repo_name,
+          current_branch: repoSummary.current_branch,
+          is_git_repo: repoSummary.is_git_repo,
+        },
+        redacted_payload_preview:
+          safetyGateResult.redacted_payload_preview,
+        token_budget: tokenBudget,
+        safety_gate_result: safetyGateResult,
+        local_stage_report: stageReport,
+      };
+    }, [repoSummary, safetyGateResult, stageReport, tokenBudget]);
+  const stageHistoryDisabledReasons = useMemo(
+    () =>
+      getStageHistorySaveDisabledReasons({
+        has_valid_repo: repoSummary?.is_git_repo ?? false,
+        has_stage_payload: stagePayload !== null,
+        token_budget: tokenBudget,
+        safety_gate_result: safetyGateResult,
+        local_stage_report: stageReport,
+        is_inspecting_repo: isInspecting,
+        is_loading_changed_files: isLoadingChangedFiles,
+        is_loading_diff: isLoadingDiff,
+        is_loading_commands: commandRunnerState.isLoadingCommands,
+        is_running_command: commandRunnerState.isRunning,
+      }),
+    [
+      commandRunnerState.isLoadingCommands,
+      commandRunnerState.isRunning,
+      isInspecting,
+      isLoadingChangedFiles,
+      isLoadingDiff,
+      repoSummary?.is_git_repo,
+      safetyGateResult,
+      stagePayload,
+      stageReport,
+      tokenBudget,
+    ],
   );
 
   const futureAiApproval: FutureAiApproval = useMemo(() => {
@@ -549,6 +605,8 @@ export default function App() {
           onRefreshProviderReadiness={refreshProviderReadiness}
           hasValidRepo={repoSummary?.is_git_repo ?? false}
           pipelineSteps={pipelineSteps}
+          stageHistorySnapshotInput={stageHistorySnapshotInput}
+          stageHistoryDisabledReasons={stageHistoryDisabledReasons}
         />
       }
     >
